@@ -1,9 +1,18 @@
 # eclipse
 .project
 
+# make
+Makefile.bak
+
 # sml
 *.ui
 *.uo
 
 # tiger
 tiger
+
+# lex & yacc
+parser.output
+parser.sig
+parser.sml
+lexer.sml
