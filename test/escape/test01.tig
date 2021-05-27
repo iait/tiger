@@ -1,0 +1,6 @@
+let
+  var x : int := 10
+  function f() : int = x
+in
+  f()
+end
