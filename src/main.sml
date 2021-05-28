@@ -1,6 +1,6 @@
 open lexer
 open parser
-open nlin
+open line
 open pretty
 open escape
 open BasicIO Nonstdio

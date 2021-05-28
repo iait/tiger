@@ -1,7 +1,7 @@
 structure escape :> escape = struct
 
   open ast
-  open tabla
+  open table
 
   type depth = int
   type escEnv = (string, depth * bool ref) Tabla

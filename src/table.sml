@@ -1,4 +1,4 @@
-structure tabla :> tabla = struct
+structure table :> table = struct
 
   open Polyhash
 

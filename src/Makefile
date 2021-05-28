@@ -22,7 +22,7 @@ MOVE=mv
 .SUFFIXES:
 .SUFFIXES: .sig .sml .ui .uo
 
-GRALOBJS=ast.uo parser.uo lexer.uo nlin.uo pretty.uo tabla.uo escape.uo \
+GRALOBJS=ast.uo parser.uo lexer.uo line.uo pretty.uo table.uo escape.uo \
 	main.uo
 
 all: tiger
@@ -51,7 +51,7 @@ clean:
 .sml.uo:
 	$(MOSMLC) $<
 
-depend: ast.sml parser.sml lexer.sml nlin.sml pretty.sml tabla.sml escape.sml \
+depend: ast.sml parser.sml lexer.sml line.sml pretty.sml table.sml escape.sml \
 	main.sml
 	$(REMOVE) Makefile.bak
 	$(MOVE) Makefile Makefile.bak
@@ -59,11 +59,12 @@ depend: ast.sml parser.sml lexer.sml nlin.sml pretty.sml tabla.sml escape.sml \
 	$(MOSMLTOOLS)/mosmldep >> Makefile
 
 ### DO NOT DELETE THIS LINE
-escape.uo: escape.ui ast.uo tabla.ui 
-parser.uo: parser.ui nlin.uo ast.uo 
-tabla.uo: tabla.ui 
-lexer.uo: parser.ui nlin.uo 
+escape.uo: escape.ui table.ui ast.uo 
+parser.uo: parser.ui line.uo ast.uo 
+lexer.uo: parser.ui line.uo 
+entry.uo: table.ui ast.uo typ.uo 
 escape.ui: ast.uo 
-main.uo: pretty.uo parser.ui nlin.uo lexer.uo escape.ui 
+main.uo: pretty.uo parser.ui lexer.uo line.uo escape.ui 
 pretty.uo: ast.uo 
+table.uo: table.ui 
 parser.ui: ast.uo 

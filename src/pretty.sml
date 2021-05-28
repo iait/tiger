@@ -1,7 +1,3 @@
-(*
-structure tigerpp :> tigerpp = 
-struct
-*)
 
 open ast
 open PP

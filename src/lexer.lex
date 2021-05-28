@@ -1,7 +1,7 @@
 {
 open parser
 
-val nlin = nlin.nlin
+val nlin = line.nlin
 val ncom = ref 0
 
 val atoi = valOf o Int.fromString

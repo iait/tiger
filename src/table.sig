@@ -1,4 +1,4 @@
-signature tabla = sig
+signature table = sig
 
   type ('a, 'b) Tabla
 
