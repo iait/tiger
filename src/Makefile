@@ -23,7 +23,7 @@ MOVE=mv
 .SUFFIXES: .sig .sml .ui .uo
 
 GRALOBJS=ast.uo parser.uo lexer.uo line.uo pretty.uo table.uo escape.uo \
-	main.uo
+	translate.uo typ.uo entry.uo temp.uo main.uo
 
 all: tiger
 
@@ -52,7 +52,7 @@ clean:
 	$(MOSMLC) $<
 
 depend: ast.sml parser.sml lexer.sml line.sml pretty.sml table.sml escape.sml \
-	main.sml
+	translate.sml typ.sml entry.sml temp.sml main.sml
 	$(REMOVE) Makefile.bak
 	$(MOVE) Makefile Makefile.bak
 	$(MOSMLTOOLS)/cutdeps < Makefile.bak > Makefile
