@@ -205,7 +205,9 @@ structure seman :> seman = struct
         | trexp (WhileExp ({test, body}, nl)) =
             let
               val {exp=exptest, ty=tytest} = trexp test
+              (* val _ = preWhileFor() *)
               val {exp=expbody, ty=tybody} = trexp body
+              (* val _ = postWhileFor() *)
             in
               if tytest<>TInt then
                 error ("error de tipo en la condición", nl)
@@ -219,7 +221,9 @@ structure seman :> seman = struct
               val venv' = tabInserta (var, Var {ty=TInt}, venv)
               val {exp=explo, ty=tylo} = trexp lo
               val {exp=exphi, ty=tyhi} = trexp hi
+              (* val _ = preWhileFor() *)
               val {exp=expbody, ty=tybody} = transExp (venv', tenv) body
+              (* val _ = preWhileFor() *)
             in
               if tylo<>TInt then
                 error ("error en el tipo de lo", nl)
@@ -329,8 +333,51 @@ structure seman :> seman = struct
             in
               (venv, tenv', [])
             end
-        | trdec (venv,tenv) (FunctionDec fs) =
-            (venv, tenv, []) (*COMPLETAR*)
+        | trdec (FunctionDec fs) =
+            let
+              (* traduce un parámetro de función a su Tipo *)
+              fun paramToTipo nl {name,escape,typ} = case tabBusca (typ, tenv) of
+                SOME t => t
+                | NONE => error ("tipo inexistente \""^typ^"\"", nl)
+              
+              (* traduce el resultado de la función a su Tipo *)
+              fun resultToTipo nl (SOME s) = case tabBusca (s, tenv) of
+                    SOME t => t
+                    | NONE => error ("tipo inexistente \""^s^"\"", nl)
+                | resultToTipo _ NONE = TUnit
+              
+              (* traduce una declaración de función en su EnvEntry de tipo Func *)
+              fun trfn ({name,params,result,body}, nl) =
+                let
+                  val fs = List.map (paramToTipo nl) params
+                  val r = resultToTipo nl result
+                in
+                  (name, Func {level=(), label=newlabel(), formals=fs, result=r, extern=false})
+                end
+              
+              (* crea nuevo entorno con la declaración de las funciones del batch *)
+              val venv' = tabInserList (venv, (List.map trfn fs))
+              
+              (* traduce un parámetro de función a su EnvEntry de tipo Var *)
+              fun paramToVar nl p = (#name(p), Var {ty=paramToTipo nl p})
+              
+              (* traduce una función y verifica el tipo de retorno *)
+              fun trbody ({name,params,result,body}, nl) = 
+                let
+                  (* crear nuevo entorno con las variables de los parámetros *)
+                  val venv'' = tabInsertList (venv' (List.map (paramToVar nl) params))
+                  val {exp,ty} = transExp (venv'', tenv) body
+                  val tyresult = resultToTipo nl result
+                in
+                  if tiposIguales ty tyresult then {exp=exp, ty=ty}
+                  else error ("cuerpo de la función \""^name^"\" incorrecto", nl)
+                end
+              
+              (* traduce todas las funciones del batch *)
+              val res = List.map trbody fs
+            in
+              (venv', tenv, res)
+            end
     in
       trdec
     end
