@@ -1,10 +1,13 @@
 structure seman :> seman = struct
 
   open ast
+  open typ
   open entry
   open translate
   open table
   open topsort
+  open util
+  open printtyp
 
   type expty = {exp: exp, ty: Tipo}
 
@@ -48,10 +51,11 @@ structure seman :> seman = struct
     | tiposIguales _ (TTipo _) = raise Fail ("No debería ocurrir! (1)\n")
     | tiposIguales a b = (a=b)
 
+  fun error (s, p) = raise Fail ("Error -- línea "^Int.toString(p)^": "^s^"\n")
+
   (* transExp : venv * tenv -> ast.exp -> expty *)
   fun transExp (venv, tenv) =
     let
-      fun error (s, p) = raise Fail ("Error -- línea "^Int.toString(p)^": "^s^"\n")
 
       (* traducción de expresiones *)
       fun trexp (VarExp v) = trvar v
@@ -149,7 +153,7 @@ structure seman :> seman = struct
               fun verificar [] [] = ()
                 | verificar (c::cs) [] = error ("faltan campos en el record", nl)
                 | verificar [] (c::cs) = error("sobran campos en el record", nl)
-                | verificar ((s,t,_)::cs) ((sy,{exp,ty})::ds) =
+                | verificar ((s,t)::cs) ((sy,{exp,ty})::ds) =
                   if s<>sy then 
                     error("error de campo \""^sy^"\" en el record", nl)
                   else if not (tiposIguales (!t) ty) then
@@ -251,7 +255,7 @@ structure seman :> seman = struct
               val {exp=expinit, ty=tyinit} = trexp init
               val (tyresult, tycontent) = case tabBusca (typ, tenv) of
                 NONE => error ("tipo inexistente \""^typ^"\"", nl)
-                | SOME (TArray (r, u)) => (TArray (r, u), !r)
+                | SOME (TArray (t, u)) => (TArray (t, u), t)
                 | _ => error ("el tipo \""^typ^"\" no es un array", nl)
             in
               if tysize<>TInt then
@@ -280,9 +284,9 @@ structure seman :> seman = struct
                 | _ => error ("se esperaba un tipo record para buscar el campo \""^s^"\"", nl)
               
               (* busca el tipo del campo s en el tipo de la variable v *)
-              val tipo = case List.find (fn (sy,_,_) => s=sy) cs of
+              val tipo = case List.find (fn (sy,_) => s=sy) cs of
                 NONE => error ("no existe el campo \""^s^"\" en el record", nl)
-                | SOME (_,r,_) => !r
+                | SOME (_,r) => !r
             in
               {exp=SCAF, ty=tipo}
             end
@@ -290,7 +294,7 @@ structure seman :> seman = struct
             let
               (* traduce la variable v y la expresión e *)
               val (vexp, tipo) = case trvar (v, nl) of
-                {exp, ty=TArray (r, u)} => (exp, !r)
+                {exp, ty=TArray (t, u)} => (exp, t)
                 | _ => error ("se esperaba un tipo array", nl)
               val iexp = case trexp e of
                 {exp, ty=TInt} => exp
@@ -341,9 +345,9 @@ structure seman :> seman = struct
                 | NONE => error ("tipo inexistente \""^typ^"\"", nl)
               
               (* traduce el resultado de la función a su Tipo *)
-              fun resultToTipo nl (SOME s) = case tabBusca (s, tenv) of
+              fun resultToTipo nl (SOME s) = (case tabBusca (s, tenv) of
                     SOME t => t
-                    | NONE => error ("tipo inexistente \""^s^"\"", nl)
+                    | NONE => error ("tipo inexistente \""^s^"\"", nl))
                 | resultToTipo _ NONE = TUnit
               
               (* traduce una declaración de función en su EnvEntry de tipo Func *)
@@ -365,12 +369,12 @@ structure seman :> seman = struct
               fun trbody ({name,params,result,body}, nl) = 
                 let
                   (* crear nuevo entorno con las variables de los parámetros *)
-                  val venv'' = tabInsertList (venv' (List.map (paramToVar nl) params))
+                  val venv'' = tabInserList (venv', List.map (paramToVar nl) params)
                   val {exp,ty} = transExp (venv'', tenv) body
                   val tyresult = resultToTipo nl result
                 in
                   if tiposIguales ty tyresult then {exp=exp, ty=ty}
-                  else error ("cuerpo de la función \""^name^"\" incorrecto", nl)
+                  else (error ("cuerpo de la función \""^name^"\" incorrecto", nl))
                 end
               
               (* traduce todas las funciones del batch *)
@@ -386,7 +390,7 @@ structure seman :> seman = struct
   fun transProg ex =
         let
           val main = LetExp ({
-                decs=[FunctionDec[({name="_tigermain", params=[], result=NONE, body=ex}, 0)]],
+                decs=[FunctionDec[({name="_tigermain", params=[], result=SOME "int", body=ex}, 0)]],
                 body=UnitExp 0}, 0)
           val _ = transExp (tabVars, tabTipos) main
         in

@@ -3,6 +3,7 @@ open parser
 open line
 open printast
 open escape
+open seman
 open BasicIO Nonstdio
 
 (* lexstream : instream -> lexbuf *)
@@ -36,7 +37,7 @@ fun main args =
     val _ = findEscape expr
     val _ = if arbol then printAst expr else ()
   in
-    (*transProg expr;*)
+    transProg expr;
     print "yes!!\n"
   end	handle Fail s => print("Fail: "^s^"\n")
 

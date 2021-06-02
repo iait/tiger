@@ -31,11 +31,13 @@ structure printtyp :> printtyp = struct
   and pfl [] n ul = print ""
     | pfl ((s, r)::xs) n ul = (print "\n"; indent n; print (s^": "); ptyp (!r) n ul; pfl xs n ul)
   
-  fun printTyp tenv s = case tabBusca (s, tenv) of
-    SOME t => (print (s^": "); ptyp t 0 []; print "\n")
+  fun printTyp t = ptyp t 0 []
+  
+  fun findPrintTyp tenv s = case tabBusca (s, tenv) of
+    SOME t => (print (s^": "); printTyp t; print "\n")
     | NONE => raise Fail ("no se encuentra el tipo \""^s^"\"")
   
   fun printTEnv tenv = 
-    List.app (printTyp tenv) (tabClaves tenv)
+    List.app (findPrintTyp tenv) (tabClaves tenv)
 
 end

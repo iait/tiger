@@ -1,5 +1,9 @@
 structure topsort :> topsort = struct
   
+  open ast
+  open table
+  open typ
+  
   exception Ciclo
   
   (* arma grafo a partir de las declaraciones de tipos *)
