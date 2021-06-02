@@ -1,7 +1,7 @@
 open lexer
 open parser
 open line
-open pretty
+open printast
 open escape
 open BasicIO Nonstdio
 
@@ -33,8 +33,8 @@ fun main args =
        | _   => raise Fail "opción dsconocida!"
     val lexbuf = lexstream entrada
     val expr = prog Tok lexbuf handle _ => errParsing lexbuf
-    val _ = findEscape(expr)
-    val _ = if arbol then exprAst expr else ()
+    val _ = findEscape expr
+    val _ = if arbol then printAst expr else ()
   in
     (*transProg expr;*)
     print "yes!!\n"

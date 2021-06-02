@@ -4,14 +4,17 @@ structure seman :> seman = struct
   open entry
   open translate
   open table
+  open topsort
 
   type expty = {exp: exp, ty: Tipo}
 
   type venv = (string, EnvEntry) Tabla
   type tenv = (string, Tipo) Tabla
 
-  val tabTipos : (string, Tipo) Tabla = 
-        tabInserList (tabNueva(), [("int", TInt), ("string", TString)])
+  val tabTipos : (string, Tipo) Tabla = tabInserList (tabNueva(), [
+    ("int", TInt), 
+    ("string", TString)
+  ])
 
   val tabVars : (string, EnvEntry) Tabla = tabInserList (tabNueva(), [
     ("print", Func {level=mainLevel, label="print",
@@ -34,13 +37,15 @@ structure seman :> seman = struct
       formals=[TInt], result=TInt, extern=true}),
     ("exit", Func{level=mainLevel, label="exit",
       formals=[TInt], result=TUnit, extern=true})
-    ])
+  ])
 
   fun tiposIguales (TRecord _) TNil = true
     | tiposIguales TNil (TRecord _) = true 
     | tiposIguales TNil TNil = false
     | tiposIguales (TRecord (_, u1)) (TRecord (_, u2)) = (u1=u2)
     | tiposIguales (TArray (_, u1)) (TArray (_, u2)) = (u1=u2)
+    | tiposIguales (TTipo _) _ = raise Fail ("No debería ocurrir! (1)\n")
+    | tiposIguales _ (TTipo _) = raise Fail ("No debería ocurrir! (1)\n")
     | tiposIguales a b = (a=b)
 
   (* transExp : venv * tenv -> ast.exp -> expty *)
@@ -126,7 +131,7 @@ structure seman :> seman = struct
                                   error("error de tipos en >", nl)
                   | GeOp     => if tyl=TInt orelse tyl=TString then {exp=SCAF,ty=TInt} else 
                                   error("error de tipos en >=", nl)
-                  | _        => raise Fail "No debería pasar! (3)"
+                  | _        => raise Fail "No debería ocurrir! (2)\n"
               else error("error de tipos", nl)
             end
         | trexp (RecordExp ({fields, typ}, nl)) =
@@ -315,34 +320,20 @@ structure seman :> seman = struct
                       else error ("tipo \""^s^"\" no compatible con inicialización", nl)
               val venv' = tabRInserta (name, Var {ty=tyvar}, venv)
             in
-              (venv', tenv, [{exp=SCAF, ty=tyvar}]) (*TODO qué es esta lista*)
+              (venv', tenv, [{exp=SCAF, ty=tyvar}]) (*TODO qué es la lista que devuelve trdec*)
             end
         | trdec (TypeDec ts) =
             let
-              (* arma lista de dependencias de las declaraciones de tipos *) 
-              fun deps [] = []
-                | deps ({name, ty=NameTy s}::decs) = (s, name)::(deps decs)
-                | deps ({name, ty=ArrayTy s}::decs) = (s, name)::(deps decs)
-                | deps (_::decs) = deps decs
-              (* detecta ciclos en las dependencias buscando orden topológico *)
-              val _ = (topsort o deps o (List.map #1)) ts
-              (* ingresa todos los tipos en la tabla *)
-              fun toTipo (NameTy s) = TTipo s
-                | toTipo (ArrayTy s) = TArray (ref (TTipo s), ref())
-                | toTipo (RecordTy fl) = TRecord (List.map 
-                    (fn {name,escape,typ} => (name, ref (TTipo s), 0)) fl, ref()) (*TODO cuándo sepa qué es el int del TRecord*)
-              val tenv' = tabInserList (tenv, 
-                    List.map (fn ({name, ty}, _) => (name, toTipo ty)) ts)
-              (* completa las referencias *)
-              fun replaceRefs (name, TTipo s) = ()
-                | replaceRefs 
-            (venv, tenv, []) (*COMPLETAR*)
+              val decs = List.map (fn (dec, pos) => dec) ts
+              val tenv' = fijaTipos decs tenv
+            in
+              (venv, tenv', [])
+            end
         | trdec (venv,tenv) (FunctionDec fs) =
             (venv, tenv, []) (*COMPLETAR*)
     in
       trdec
     end
-    (* puedo definir otra función transTy : tenv -> ast.ty -> Tipo *)
 
   (* chequea tipos y traduce un programa tiger *)
   fun transProg ex =
