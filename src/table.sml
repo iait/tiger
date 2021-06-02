@@ -26,6 +26,8 @@ structure table :> table = struct
 
   fun tabInserta (s, e, t) = let val t' = copy t in (peekInsert t' (s, e); t') end
 
+  fun tabMete (s, e, t) = insert t (s, e)
+
   fun tabRInserta (s, e, t) = let val t' = copy t in (insert t' (s, e); t') end
 
   fun tabBusca(s, t) = peek t s
@@ -79,5 +81,7 @@ structure table :> table = struct
   fun tabPrimer (f, t) = hd (List.filter (fn (_, b) => f b) (listItems t))
 
   fun tabClaves t = List.map (fn (x, _) => x) (listItems t)
+
+  fun tabValores t = List.map (fn (_, x) => x) (listItems t)
 
 end

@@ -38,13 +38,14 @@ structure seman :> seman = struct
 
   fun tiposIguales (TRecord _) TNil = true
     | tiposIguales TNil (TRecord _) = true 
+    | tiposIguales TNil TNil = false
     | tiposIguales (TRecord (_, u1)) (TRecord (_, u2)) = (u1=u2)
     | tiposIguales (TArray (_, u1)) (TArray (_, u2)) = (u1=u2)
     | tiposIguales a b = (a=b)
 
   (* transExp : venv * tenv -> ast.exp -> expty *)
   fun transExp (venv, tenv) =
-    let 
+    let
       fun error (s, p) = raise Fail ("Error -- línea "^Int.toString(p)^": "^s^"\n")
 
       (* traducción de expresiones *)
@@ -171,93 +172,179 @@ structure seman :> seman = struct
             in
               {exp=SCAF, ty=TUnit}
             end
-(*TODO*)
-        | trexp (IfExp({test, then', else'=SOME else'}, nl)) =
-        let val {exp=testexp, ty=tytest} = trexp test
-            val {exp=thenexp, ty=tythen} = trexp then'
-            val {exp=elseexp, ty=tyelse} = trexp else'
-        in
-          if tytest=TInt andalso tiposIguales tythen tyelse then {exp=SCAF, ty=tythen}
-          else error("Error de tipos en if" ,nl)
-        end
-      | trexp(IfExp({test, then', else'=NONE}, nl)) =
-        let val {exp=exptest,ty=tytest} = trexp test
-            val {exp=expthen,ty=tythen} = trexp then'
-        in
-          if tytest=TInt andalso tythen=TUnit then {exp=SCAF, ty=TUnit}
-          else error("Error de tipos en if", nl)
-        end
-      | trexp(WhileExp({test, body}, nl)) =
-        let
-          val ttest = trexp test
-          val tbody = trexp body
-        in
-          if (#ty ttest) = TInt andalso #ty tbody = TUnit then {exp=SCAF, ty=TUnit}
-          else if (#ty ttest) <> TInt then error("Error de tipo en la condición", nl)
-          else error("El cuerpo de un while no puede devolver un valor", nl)
-        end
-      | trexp(ForExp({var, escape, lo, hi, body}, nl)) =
-        {exp=SCAF, ty=TUnit} (*COMPLETAR*)
-      | trexp(LetExp({decs, body}, _)) =
-        let
-          val (venv', tenv', _) = List.foldl (fn (d, (v, t, _)) => trdec(v, t) d) (venv, tenv, []) decs
-          val {exp=expbody,ty=tybody}=transExp (venv', tenv') body
-        in 
-          {exp=SCAF, ty=tybody}
-        end
-      | trexp(BreakExp nl) =
-        {exp=SCAF, ty=TUnit} (*COMPLETAR*)
-      | trexp(ArrayExp({typ, size, init}, nl)) =
-        {exp=SCAF, ty=TUnit} (*COMPLETAR*)
+        | trexp (IfExp ({test, then', else'=SOME else'}, nl)) =
+            let 
+              val {exp=testexp, ty=tytest} = trexp test
+              val {exp=thenexp, ty=tythen} = trexp then'
+              val {exp=elseexp, ty=tyelse} = trexp else'
+            in
+              if tytest<>TInt then
+                error ("error de tipo en la condición", nl)
+              else if not (tiposIguales tythen tyelse) then
+                error ("los tipos del then y else no coinciden", nl)
+              else
+                {exp=SCAF, ty=tythen}
+            end
+        | trexp (IfExp ({test, then', else'=NONE}, nl)) =
+            let
+              val {exp=exptest, ty=tytest} = trexp test
+              val {exp=expthen, ty=tythen} = trexp then'
+            in
+              if tytest<>TInt then
+                error ("error de tipo en la condición", nl)
+              else if tythen<>TUnit then
+                error ("el cuerpo del then no puede devolver valor", nl)
+              else
+                {exp=SCAF, ty=TUnit}
+            end
+        | trexp (WhileExp ({test, body}, nl)) =
+            let
+              val {exp=exptest, ty=tytest} = trexp test
+              val {exp=expbody, ty=tybody} = trexp body
+            in
+              if tytest<>TInt then
+                error ("error de tipo en la condición", nl)
+              else if tybody<>TUnit then
+                error ("el cuerpo del while no puede devolver valor", nl)
+              else
+                {exp=SCAF, ty=TUnit}
+            end
+        | trexp (ForExp ({var, escape, lo, hi, body}, nl)) =
+            let
+              val venv' = tabInserta (var, Var {ty=TInt}, venv)
+              val {exp=explo, ty=tylo} = trexp lo
+              val {exp=exphi, ty=tyhi} = trexp hi
+              val {exp=expbody, ty=tybody} = transExp (venv', tenv) body
+            in
+              if tylo<>TInt then
+                error ("error en el tipo de lo", nl)
+              else if tyhi<>TInt then 
+                error ("error en el tipo de hi", nl)
+              else if tybody<>TUnit then
+                error ("el cuerpo del for no puede devolver valor", nl)
+              else
+                {exp=SCAF, ty=TUnit}
+            end
+        | trexp (LetExp ({decs, body}, _)) =
+            let
+              val (venv', tenv', _) = List.foldl (fn (d, (v, t, _)) => transDec (v, t) d) 
+                                        (venv, tenv, []) decs
+              val {exp=expbody, ty=tybody} = transExp (venv', tenv') body
+            in 
+              {exp=SCAF, ty=tybody}
+            end
+        | trexp (BreakExp nl) =
+            {exp=SCAF, ty=TUnit} (*COMPLETAR*)
+        | trexp (ArrayExp ({typ, size, init}, nl)) =
+            let
+              (* traduce las expresiónes *)
+              val {exp=expsize, ty=tysize} = trexp size
+              val {exp=expinit, ty=tyinit} = trexp init
+              val (tyresult, tycontent) = case tabBusca (typ, tenv) of
+                NONE => error ("tipo inexistente \""^typ^"\"", nl)
+                | SOME (TArray (r, u)) => (TArray (r, u), !r)
+                | _ => error ("el tipo \""^typ^"\" no es un array", nl)
+            in
+              if tysize<>TInt then
+                error ("error en el tipo de size", nl)
+              else if not (tiposIguales tyinit tycontent) then
+                error ("tipo de init incorrecto", nl)
+              else
+                {exp=SCAF, ty=tyresult}
+            end
 
-    (* traducción de variables *)
-    and trvar (SimpleVar s, nl) =
-          let
-            val tipo = case tabBusca (s, venv) of
-              NONE => error ("variable inexistente \""^s^"\"", nl)
-              | SOME (Var {ty}) => ty
-              | _ => error ("se esperaba que \""^s^"\" fuese una variable", nl)
-          in
-            {exp=SCAF, ty=tipo}
-          end
-      | trvar (FieldVar (v, s), nl) = 
-          let
-            (* traduce la variable v *)
-            val (exp, cs) = case trvar (v, nl) of
-              {exp, ty=TRecord (cs, u)} => (exp, cs)
-              | _ => error ("se esperaba un tipo record para buscar el campo \""^s^"\"", nl)
-            
-            (* busca el tipo del campo s en el tipo de la variable v *)
-            val tipo = case List.find (fn (sy,_,_) => s=sy) cs of
-              NONE => error ("no existe el campo \""^s^"\" en el record", nl)
-              | SOME (_,r,_) => !r
-          in
-            {exp=SCAF, ty=tipo}
-          end
-      | trvar (SubscriptVar (v, e), nl) =
-          let
-            (* traduce la variable v y la expresión e *)
-            val (vexp, tipo) = case trvar (v, nl) of
-              {exp, ty=TArray (r, u)} => (exp, !r)
-              | _ => error ("se esperaba un tipo array", nl)
-            val iexp = case trexp e of
-              {exp, ty=TInt} => exp
-              | _ => error ("el índice debe ser de tipo entero", nl)
-          in
-            {exp=SCAF, ty=tipo}
-          end
+      (* traducción de variables *)
+      and trvar (SimpleVar s, nl) =
+            let
+              val tipo = case tabBusca (s, venv) of
+                NONE => error ("variable inexistente \""^s^"\"", nl)
+                | SOME (Var {ty}) => ty
+                | _ => error ("se esperaba que \""^s^"\" fuese una variable", nl)
+            in
+              {exp=SCAF, ty=tipo}
+            end
+        | trvar (FieldVar (v, s), nl) = 
+            let
+              (* traduce la variable v *)
+              val (exp, cs) = case trvar (v, nl) of
+                {exp, ty=TRecord (cs, u)} => (exp, cs)
+                | _ => error ("se esperaba un tipo record para buscar el campo \""^s^"\"", nl)
+              
+              (* busca el tipo del campo s en el tipo de la variable v *)
+              val tipo = case List.find (fn (sy,_,_) => s=sy) cs of
+                NONE => error ("no existe el campo \""^s^"\" en el record", nl)
+                | SOME (_,r,_) => !r
+            in
+              {exp=SCAF, ty=tipo}
+            end
+        | trvar (SubscriptVar (v, e), nl) =
+            let
+              (* traduce la variable v y la expresión e *)
+              val (vexp, tipo) = case trvar (v, nl) of
+                {exp, ty=TArray (r, u)} => (exp, !r)
+                | _ => error ("se esperaba un tipo array", nl)
+              val iexp = case trexp e of
+                {exp, ty=TInt} => exp
+                | _ => error ("el índice debe ser de tipo entero", nl)
+            in
+              {exp=SCAF, ty=tipo}
+            end
+    in
+      trexp
+    end
 
-      (* traducción de declaraciones *)
-      and trdec (venv, tenv) (VarDec ({name,escape,typ=NONE,init},pos)) = 
-        (venv, tenv, []) (*COMPLETAR*)
-      | trdec (venv,tenv) (VarDec ({name,escape,typ=SOME s,init},pos)) =
-        (venv, tenv, []) (*COMPLETAR*)
-      | trdec (venv,tenv) (FunctionDec fs) =
-        (venv, tenv, []) (*COMPLETAR*)
-      | trdec (venv,tenv) (TypeDec ts) =
-        (venv, tenv, []) (*COMPLETAR*)
-    in trexp end
+  (* traducción de declaraciones *)
+  and transDec (venv, tenv) =
+    let
+      fun trdec (VarDec ({name, escape, typ=NONE, init}, nl)) =
+            let
+              val {exp=expinit, ty=tyinit} = transExp (venv, tenv) init
+              val _ = if tyinit<>TUnit andalso tyinit<>TNil then ()
+                      else error ("inicialización incorrecta de variable \""^name^"\"", nl)
+              val venv' = tabRInserta (name, Var {ty=tyinit}, venv)
+            in
+              (venv', tenv, [{exp=SCAF, ty=tyinit}])
+            end
+        | trdec (VarDec ({name, escape, typ=SOME s, init}, nl)) =
+            let
+              val {exp=expinit, ty=tyinit} = transExp (venv, tenv) init
+              val tyvar = case tabBusca (s, tenv) of
+                SOME t => t
+                | NONE => error ("tipo inexistente \""^s^"\"", nl)
+              val _ = if tiposIguales tyvar tyinit then () 
+                      else error ("tipo \""^s^"\" no compatible con inicialización", nl)
+              val venv' = tabRInserta (name, Var {ty=tyvar}, venv)
+            in
+              (venv', tenv, [{exp=SCAF, ty=tyvar}]) (*TODO qué es esta lista*)
+            end
+        | trdec (TypeDec ts) =
+            let
+              (* arma lista de dependencias de las declaraciones de tipos *) 
+              fun deps [] = []
+                | deps ({name, ty=NameTy s}::decs) = (s, name)::(deps decs)
+                | deps ({name, ty=ArrayTy s}::decs) = (s, name)::(deps decs)
+                | deps (_::decs) = deps decs
+              (* detecta ciclos en las dependencias buscando orden topológico *)
+              val _ = (topsort o deps o (List.map #1)) ts
+              (* ingresa todos los tipos en la tabla *)
+              fun toTipo (NameTy s) = TTipo s
+                | toTipo (ArrayTy s) = TArray (ref (TTipo s), ref())
+                | toTipo (RecordTy fl) = TRecord (List.map 
+                    (fn {name,escape,typ} => (name, ref (TTipo s), 0)) fl, ref()) (*TODO cuándo sepa qué es el int del TRecord*)
+              val tenv' = tabInserList (tenv, 
+                    List.map (fn ({name, ty}, _) => (name, toTipo ty)) ts)
+              (* completa las referencias *)
+              fun replaceRefs (name, TTipo s) = ()
+                | replaceRefs 
+            (venv, tenv, []) (*COMPLETAR*)
+        | trdec (venv,tenv) (FunctionDec fs) =
+            (venv, tenv, []) (*COMPLETAR*)
+    in
+      trdec
+    end
+    (* puedo definir otra función transTy : tenv -> ast.ty -> Tipo *)
 
+  (* chequea tipos y traduce un programa tiger *)
   fun transProg ex =
         let
           val main = LetExp ({

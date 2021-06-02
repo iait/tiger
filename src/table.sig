@@ -20,6 +20,9 @@ signature table = sig
 
   (* Crea una nueva tabla y le asocia el nuevo par sólo si no existía ya la clave *)
   val tabInserta : ''a * 'b * (''a, 'b) Tabla -> (''a, 'b) Tabla
+  
+  (* Mete la nueva asociación en la tabla *)
+  val tabMete : ''a * 'b * (''a, 'b) Tabla -> unit
 
   (* Crea una nueva tabla y le asocia el nuevo par, reemplazando la asociación
    * anterior a la clave si existiese
@@ -69,5 +72,8 @@ signature table = sig
 
   (* Retorna una lista con todas las claves *)
   val tabClaves : ('a, 'b) Tabla -> 'a list
+  
+  (* Retorna una lista con todos los valores *)
+  val tabValores : ('a, 'b) Tabla -> 'b list
 
 end
