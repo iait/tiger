@@ -51,7 +51,7 @@ structure seman :> seman = struct
     | tiposIguales _ (TTipo _) = raise Fail ("No debería ocurrir! (1)\n")
     | tiposIguales a b = (a=b)
 
-  fun error (s, p) = raise Fail ("Error -- línea "^Int.toString(p)^": "^s^"\n")
+  fun error (s, p) = raise Fail ("Error -- línea "^Int.toString(p)^": "^s)
 
   (* transExp : venv * tenv -> ast.exp -> expty *)
   fun transExp (venv, tenv) =
@@ -394,7 +394,7 @@ structure seman :> seman = struct
                 body=UnitExp 0}, 0)
           val _ = transExp (tabVars, tabTipos) main
         in
-          print "bien!\n"
+          ()
         end
 
 end

@@ -31,6 +31,9 @@ all: tiger
 tiger: $(GRALOBJS)
 	$(MOSMLL) -o tiger main.uo
 
+test: $(GRALOBJS) test.uo
+	$(MOSMLL) -o test test.uo
+
 parser.sml parser.sig: parser.grm
 	$(MOSMLYACC) parser.grm
 
@@ -54,7 +57,7 @@ clean:
 
 depend: ast.sml parser.sml lexer.sml line.sml printast.sml table.sml escape.sml \
 	translate.sml typ.sml entry.sml temp.sml topsort.sml seman.sml printtyp.sml \
-	util.sml main.sml
+	util.sml main.sml test.sml
 	$(REMOVE) Makefile.bak
 	$(MOVE) Makefile Makefile.bak
 	$(MOSMLTOOLS)/cutdeps < Makefile.bak > Makefile
@@ -72,6 +75,7 @@ seman.uo: seman.ui table.ui translate.ui entry.uo topsort.ui printtyp.ui \
     ast.uo util.ui typ.uo 
 printtyp.uo: printtyp.ui table.ui typ.uo 
 lexer.uo: parser.ui line.uo 
+test.uo: parser.ui printast.ui seman.ui lexer.uo line.uo ast.uo escape.ui 
 entry.uo: table.ui temp.ui ast.uo typ.uo 
 escape.ui: ast.uo 
 printast.uo: printast.ui ast.uo 

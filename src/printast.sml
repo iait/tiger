@@ -244,12 +244,17 @@ structure printast :> printast = struct
       end_block pps
     end
   
+  val linewidth = 79
+  
   val ppstrm =
     PP.mk_ppstream {
         consumer = fn s => TextIO.output(TextIO.stdOut, s), 
-        linewidth = 79,
+        linewidth = linewidth,
         flush = fn () => TextIO.flushOut TextIO.stdOut
     }
+  
+  fun astToString e = 
+    (pp_to_string linewidth ppexpr e)^"\n"
   
   fun printAst e =
     (ppexpr ppstrm e;

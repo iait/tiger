@@ -31,7 +31,7 @@ fun main args =
     val entrada = case l7 
       of [n] => ((open_in n) handle _ => raise Fail (n^" no existe!"))
        | []  => std_in
-       | _   => raise Fail "opción dsconocida!"
+       | _   => raise Fail "opción desconocida!"
     val lexbuf = lexstream entrada
     val expr = prog Tok lexbuf handle _ => errParsing lexbuf
     val _ = findEscape expr
