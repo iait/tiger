@@ -3,6 +3,7 @@ structure topsort :> topsort = struct
   open ast
   open table
   open typ
+  open util
   
   exception Ciclo
   
@@ -65,8 +66,15 @@ structure topsort :> topsort = struct
             | NONE => (case tabBusca (s, oldenv) of
                 SOME t => tabMete (name, TArray (t, ref()), newenv)
                 | NONE => raise Fail ("no existe el tipo \""^s^"\"")))
-        | procTy name (RecordTy fl) = tabMete (name, TRecord (List.map 
-            (fn {name,escape,typ} => (name, ref (TTipo typ))) fl, ref()), newenv)
+        | procTy name (RecordTy fl) = 
+          let
+            (* verifica que el record no tenga campos duplicados *)
+            val _ = hasDup fl handle Duplicated s => 
+              raise Fail ("el record \""^name^"\" tiene el campo duplicado \""^s^"\"")
+            val fields = List.map (fn {name,escape,typ} => (name, ref (TTipo typ))) fl
+          in
+            tabMete (name, TRecord (fields, ref()), newenv)
+          end
 
       (* procesa las declaraciones de tipos en orden y llena el newenv *)
       val _ = List.app procSymbol order

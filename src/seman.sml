@@ -369,6 +369,8 @@ structure seman :> seman = struct
               (* traduce una declaración de función en su EnvEntry de tipo Func *)
               fun trfn ({name,params,result,body}, nl) =
                 let
+                  val _ = (hasDup params) handle Duplicated s => 
+                    error ("la función \""^name^"\" tiene el parámetro duplicado \""^s^"\"", nl) 
                   val fs = List.map (paramToTipo nl) params
                   val r = resultToTipo nl result
                 in

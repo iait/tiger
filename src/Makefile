@@ -67,7 +67,7 @@ depend: ast.sml parser.sml lexer.sml line.sml printast.sml table.sml escape.sml 
 temp.uo: temp.ui 
 printast.ui: ast.uo 
 printtyp.ui: table.ui typ.uo 
-util.uo: util.ui 
+util.uo: util.ui ast.uo 
 escape.uo: escape.ui table.ui ast.uo 
 topsort.ui: table.ui ast.uo typ.uo 
 parser.uo: parser.ui line.uo ast.uo 
@@ -82,7 +82,8 @@ escape.ui: ast.uo
 printast.uo: printast.ui ast.uo 
 main.uo: parser.ui printast.ui seman.ui lexer.uo line.uo error.uo escape.ui 
 seman.ui: ast.uo 
+util.ui: ast.uo 
 table.uo: table.ui 
 translate.uo: translate.ui 
 parser.ui: ast.uo 
-topsort.uo: topsort.ui table.ui ast.uo typ.uo 
+topsort.uo: topsort.ui table.ui ast.uo util.ui typ.uo 

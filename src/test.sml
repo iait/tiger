@@ -522,17 +522,23 @@ val _ = print "Test61\n";
 val result = expect (compile "test/test61.tig") 
  (SOME "Parsing [nil]")
 val _ = printResult result
-(*
-(* test62 *)
+
+(* test62
+ * Record con campos repetidos produce error. 
+ *)
 val _ = print "Test62\n";
-val result = expect (compile "test/test62.tig") NONE
+val result = expect (compile "test/test62.tig") 
+  (SOME "el record \"rectype\" tiene el campo duplicado \"name\"")
 val _ = printResult result
 
-(* test63 *)
+(* test63
+ * Función con parámetros repetidos produce error. 
+ *)
 val _ = print "Test63\n";
-val result = expect (compile "test/test63.tig") NONE
+val result = expect (compile "test/test63.tig") 
+  (SOME "la función \"f\" tiene el parámetro duplicado \"name\"")
 val _ = printResult result
-
+(*
 (* test64 *)
 val _ = print "Test64\n";
 val result = expect (compile "test/test64.tig") NONE
