@@ -48,24 +48,20 @@ structure topsort :> topsort = struct
         sort (nodes, [], [])
       end
 
-  (* procesa las declaraciones de tipos en el orden especificado creando un nuevo entorno *)
-  fun process oldenv newenv tydecs order =
+  (* procesa las declaraciones de tipos en el orden especificado agregandolas al entorno *)
+  fun process env tydecs order =
     let
       (* busca la declaración de tipo del símbolo y lo procesa *)
       fun procSymbol name = procTy name (tabSaca (name, tydecs)) 
             handle noExiste => raise Fail "no debería pasar!"
 
       (* inserta el tipo procesado en el nuevo entorno *)
-      and procTy name (NameTy s) = (case tabBusca (s, newenv) of
-            SOME t => tabMete (name, t, newenv)
-            | NONE => (case tabBusca (s, oldenv) of
-                SOME t => tabMete (name, t, newenv)
-                | NONE => raise Fail ("no existe el tipo \""^s^"\"")))
-        | procTy name (ArrayTy s) = (case tabBusca (s, newenv) of
-            SOME t => tabMete (name, TArray (t, ref()), newenv)
-            | NONE => (case tabBusca (s, oldenv) of
-                SOME t => tabMete (name, TArray (t, ref()), newenv)
-                | NONE => raise Fail ("no existe el tipo \""^s^"\"")))
+      and procTy name (NameTy s) = (case tabBusca (s, env) of
+            SOME t => tabMete (name, t, env)
+            | NONE => raise Fail ("no existe el tipo \""^s^"\""))
+        | procTy name (ArrayTy s) = (case tabBusca (s, env) of
+            SOME t => tabMete (name, TArray (t, ref()), env)
+            | NONE => raise Fail ("no existe el tipo \""^s^"\""))
         | procTy name (RecordTy fl) = 
           let
             (* verifica que el record no tenga campos duplicados *)
@@ -73,14 +69,11 @@ structure topsort :> topsort = struct
               raise Fail ("el record \""^name^"\" tiene el campo duplicado \""^s^"\"")
             val fields = List.map (fn {name,escape,typ} => (name, ref (TTipo typ))) fl
           in
-            tabMete (name, TRecord (fields, ref()), newenv)
+            tabMete (name, TRecord (fields, ref()), env)
           end
 
       (* procesa las declaraciones de tipos en orden y llena el newenv *)
       val _ = List.app procSymbol order
-
-      (* crea un nuevo entorno con los tipos anteriores y los nuevos *)
-      val env = tabInserList (oldenv, tabAList newenv)
 
       (* completa las referencias de los fields de un tipo record *)
       fun fillRef (TRecord ([], _)) = ()
@@ -92,7 +85,7 @@ structure topsort :> topsort = struct
         | fillRef _ = ()
 
       (* segunda pasada para completar los records *)
-      val _ = List.app fillRef (tabValores newenv)
+      val _ = List.app fillRef (tabValores env)
     in
       env
     end
@@ -106,7 +99,7 @@ structure topsort :> topsort = struct
       val (nodes, edges) = genGraph batch
       val order = topsort nodes edges
       val tydecs = tabInserList (tabNueva(), List.map (fn {name,ty} => (name,ty)) batch)
-      val env' = process env (tabNueva()) tydecs order
+      val env' = process (fromTab env) tydecs order
     in
       env'
     end

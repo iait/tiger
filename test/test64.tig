@@ -1,0 +1,11 @@
+/* declaraciones de tipos */
+let
+  type a = int
+  type s = string
+  var a : a := 0
+  type b = a
+  type a = s
+  var b : b := ""
+in
+  0
+end

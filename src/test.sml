@@ -538,37 +538,14 @@ val _ = print "Test63\n";
 val result = expect (compile "test/test63.tig") 
   (SOME "la función \"f\" tiene el parámetro duplicado \"name\"")
 val _ = printResult result
-(*
-(* test64 *)
+
+(* test64
+ * Si el tipo existe en el batch se usa ese, sino se usa el tipo
+ * definido en algún batch anterior. 
+ *)
 val _ = print "Test64\n";
 val result = expect (compile "test/test64.tig") NONE
 val _ = printResult result
-
-(* test65 *)
-val _ = print "Test65\n";
-val result = expect (compile "test/test65.tig") NONE
-val _ = printResult result
-
-(* test66 *)
-val _ = print "Test66\n";
-val result = expect (compile "test/test66.tig") NONE
-val _ = printResult result
-
-(* test67 *)
-val _ = print "Test67\n";
-val result = expect (compile "test/test67.tig") NONE
-val _ = printResult result
-
-(* test68 *)
-val _ = print "Test68\n";
-val result = expect (compile "test/test68.tig") NONE
-val _ = printResult result
-
-(* test69 *)
-val _ = print "Test69\n";
-val result = expect (compile "test/test69.tig")  NONE
-val _ = printResult result
-*)
 
 local
   val l = !summary
