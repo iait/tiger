@@ -1,11 +1,10 @@
-/* error : procedure returns value  and procedure is used in arexpr */
+/* error : procedure returns value */
 let
-  /* calculate n! */
-  function nfactor (n : int) =
+  function fun (n : int) =
     if  n = 0
         then 1
-        else n * nfactor (n-1)
+        else n
 
 in
-  nfactor (10)
+  0
 end

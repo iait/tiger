@@ -4,5 +4,6 @@ let
   function odd(n: int): int =
     if n=0 then 0 else even(n-1)
 in
-  even(124)
+  even(124);
+  odd(321)
 end

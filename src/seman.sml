@@ -8,6 +8,7 @@ structure seman :> seman = struct
   open topsort
   open util
   open printtyp
+  open error
 
   type expty = {exp: exp, ty: Tipo}
 
@@ -50,8 +51,6 @@ structure seman :> seman = struct
     | tiposIguales (TTipo _) _ = raise Fail ("No debería ocurrir! (1)\n")
     | tiposIguales _ (TTipo _) = raise Fail ("No debería ocurrir! (1)\n")
     | tiposIguales a b = (a=b)
-
-  fun error (s, p) = raise Fail ("Error -- línea "^Int.toString(p)^": "^s)
 
   (* transExp : venv * tenv -> ast.exp -> expty *)
   fun transExp (venv, tenv) =
@@ -99,7 +98,7 @@ structure seman :> seman = struct
                     andalso not (tyl=TNil andalso tyr=TNil) 
                     andalso tyl<>TUnit 
                 then {exp=SCAF, ty=TInt}
-                else error ("tipos no comparables", nl)
+                else error ("tipos no comparables por igualdad", nl)
             end
         | trexp (OpExp ({left, oper=NeqOp, right}, nl)) = 
             let
@@ -110,7 +109,7 @@ structure seman :> seman = struct
                     andalso not (tyl=TNil andalso tyr=TNil) 
                     andalso tyl<>TUnit 
                 then {exp=SCAF, ty=TInt}
-                else error ("tipos no comparables", nl)
+                else error ("tipos no comparables por desigualdad", nl)
             end
         | trexp (OpExp ({left, oper, right}, nl)) = 
             let
@@ -174,6 +173,13 @@ structure seman :> seman = struct
             end
         | trexp (AssignExp ({var, exp}, nl)) =
             let
+              (* verifica que la variable no sea RO *)
+              val _ = case var of
+                SimpleVar s => (case tabBusca (s, venv) of
+                  SOME VIntRO => error ("asignación de variable índice de for \""^s^"\"", nl)
+                  | _ => ())
+                | _ => ()
+                  
               val {exp=vexp,ty=vty} = trvar (var, nl)
               val {exp, ty} = trexp exp
               val _ = if tiposIguales vty ty then () else
@@ -222,7 +228,7 @@ structure seman :> seman = struct
             end
         | trexp (ForExp ({var, escape, lo, hi, body}, nl)) =
             let
-              val venv' = tabInserta (var, Var {ty=TInt}, venv)
+              val venv' = tabInserta (var, VIntRO, venv)
               val {exp=explo, ty=tylo} = trexp lo
               val {exp=exphi, ty=tyhi} = trexp hi
               (* val _ = preWhileFor() *)
@@ -271,6 +277,7 @@ structure seman :> seman = struct
             let
               val tipo = case tabBusca (s, venv) of
                 NONE => error ("variable inexistente \""^s^"\"", nl)
+                | SOME VIntRO => TInt
                 | SOME (Var {ty}) => ty
                 | _ => error ("se esperaba que \""^s^"\" fuese una variable", nl)
             in
@@ -330,15 +337,24 @@ structure seman :> seman = struct
             in
               (venv', tenv, [{exp=SCAF, ty=tyvar}]) (*TODO qué es la lista que devuelve trdec*)
             end
-        | trdec (TypeDec ts) =
+        | trdec (TypeDec []) = raise Fail "no debería pasar!"
+        | trdec (TypeDec (ts as (_,nl)::_)) =
             let
               val decs = List.map (fn (dec, pos) => dec) ts
-              val tenv' = fijaTipos decs tenv
+              val tenv' = (fijaTipos decs tenv) handle
+                Ciclo => error ("ciclo en la declaración de tipos", nl)
+                | Fail s => error (s, nl)
             in
               (venv, tenv', [])
             end
         | trdec (FunctionDec fs) =
             let
+              (* Verifica que no haya funciones repetidas en el batch *)
+              val _ = List.foldl (fn (({name,params,result,body},nl), ns) => 
+                if List.exists (fn x => x=name) ns
+                  then error ("declaración de tipo \""^name^"\" duplicada", nl)
+                  else (name::ns)) [] fs
+            
               (* traduce un parámetro de función a su Tipo *)
               fun paramToTipo nl {name,escape,typ} = case tabBusca (typ, tenv) of
                 SOME t => t

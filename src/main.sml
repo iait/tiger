@@ -5,16 +5,15 @@ open printast
 open escape
 open seman
 open BasicIO Nonstdio
+open error
 
 (* lexstream : instream -> lexbuf *)
 fun lexstream (is: instream) =
   Lexing.createLexer (fn b => fn n => buff_input is b 0 n);
 
 (* errParsing : lexbuf -> 'a *)
-fun errParsing lbuf = (
-  print("Error en parsing!(" ^ (makestring (!nlin)) ^ ")[" ^ (Lexing.getLexeme lbuf) ^ "]\n");
-  raise Fail "fin!"
-)
+fun errParsing lbuf =
+  error ("Parsing ["^(Lexing.getLexeme lbuf)^"]", !nlin)
 
 fun main args =
   let

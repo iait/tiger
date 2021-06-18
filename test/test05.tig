@@ -1,7 +1,7 @@
+/* la variable x no está escapada */
 let
   var x : int := 0
-  function f(x : int) = ()
-  function g() : int = x
+  function f(x : int) : int = x
 in
-  0
+  f(0)
 end

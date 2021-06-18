@@ -1,3 +1,4 @@
+/* la variable x está escapada por la función f */
 let
   var x : int := 10
   function f() : int = x

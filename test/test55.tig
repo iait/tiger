@@ -1,3 +1,4 @@
+/* merge */
 let
  type any = {any : int}
  var buffer := getchar ()

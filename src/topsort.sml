@@ -10,9 +10,13 @@ structure topsort :> topsort = struct
   fun genGraph batch =
     let
       fun aux [] graph = graph
-        | aux ({name, ty=NameTy s}::lt) (ns, es) = aux lt (name::ns, (s, name)::es)
-        | aux ({name, ty=ArrayTy s}::lt) (ns, es) = aux lt (name::ns, (s, name)::es)
-        | aux ({name, ty=RecordTy fl}::lt) (ns, es) = aux lt (name::ns, es)
+        | aux ({name,ty}::lt) (ns, es) = 
+          if List.exists (fn x => x=name) ns 
+            then raise Fail ("declaración de tipo \""^name^"\" duplicada")
+            else case ty of
+              NameTy s => aux lt (name::ns, (s, name)::es)
+              | ArrayTy s => aux lt (name::ns, (s, name)::es)
+              | RecordTy fl => aux lt (name::ns, es)
     in
       aux batch ([], [])
     end
@@ -48,7 +52,7 @@ structure topsort :> topsort = struct
     let
       (* busca la declaración de tipo del símbolo y lo procesa *)
       fun procSymbol name = procTy name (tabSaca (name, tydecs)) 
-            handle noExiste => raise Fail ("no debería pasar!")
+            handle noExiste => raise Fail "no debería pasar!"
 
       (* inserta el tipo procesado en el nuevo entorno *)
       and procTy name (NameTy s) = (case tabBusca (s, newenv) of

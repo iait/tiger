@@ -10,6 +10,7 @@ Makefile.bak
 
 # tiger
 tiger
+tiger-test
 
 # lex & yacc
 parser.output
