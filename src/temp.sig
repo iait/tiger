@@ -4,8 +4,8 @@ signature temp = sig
   type temp = string
 
   val makeString: string -> string
-  val newtemp: unit -> temp
-  val newlabel: unit -> label
+  val newTemp: unit -> temp
+  val newLabel: unit -> label
   (*
   val namedLabel: string -> label
   *)

@@ -14,14 +14,14 @@ structure temp :> temp = struct
     val i = ref 0
     val j = ref 0
   in
-    fun newtemp() =
+    fun newTemp() =
       let
         val s = "T"^Int.toString(!i)
       in
         i := !i+1; s
       end
 
-    fun newlabel() =
+    fun newLabel() =
       let
         val s = "L"^Int.toString(!j)
       in

@@ -374,7 +374,7 @@ structure seman :> seman = struct
                   val fs = List.map (paramToTipo nl) params
                   val r = resultToTipo nl result
                 in
-                  (name, Func {level=(), label=newlabel(), formals=fs, result=r, extern=false})
+                  (name, Func {level=(), label=newLabel(), formals=fs, result=r, extern=false})
                 end
               
               (* crea nuevo entorno con la declaración de las funciones del batch *)
