@@ -9,6 +9,7 @@ structure seman :> seman = struct
   open util
   open printtyp
   open error
+  open stack
 
   type expty = {exp: exp, ty: Tipo}
 
@@ -19,27 +20,32 @@ structure seman :> seman = struct
     ("int", TInt), 
     ("string", TString)
   ])
+  
+  val levelPila: level Pila = nuevaPila1 outermost
+  fun pushLevel l = pushPila levelPila l
+  fun popLevel() = popPila levelPila
+  fun topLevel() = topPila levelPila
 
   val tabVars : (string, EnvEntry) Tabla = tabInserList (tabNueva(), [
-    ("print", Func {level=mainLevel, label="print",
+    ("print", Func {level=topLevel(), label="print",
       formals=[TString], result=TUnit, extern=true}),
-    ("flush", Func{level=mainLevel, label="flush",
+    ("flush", Func{level=topLevel(), label="flush",
       formals=[], result=TUnit, extern=true}),
-    ("getchar", Func{level=mainLevel, label="getstr",
+    ("getchar", Func{level=topLevel(), label="getstr",
       formals=[], result=TString, extern=true}),
-    ("ord", Func{level=mainLevel, label="ord",
+    ("ord", Func{level=topLevel(), label="ord",
       formals=[TString], result=TInt, extern=true}),
-    ("chr", Func{level=mainLevel, label="chr",
+    ("chr", Func{level=topLevel(), label="chr",
       formals=[TInt], result=TString, extern=true}),
-    ("size", Func{level=mainLevel, label="size",
+    ("size", Func{level=topLevel(), label="size",
       formals=[TString], result=TInt, extern=true}),
-    ("substring", Func{level=mainLevel, label="substring",
+    ("substring", Func{level=topLevel(), label="substring",
       formals=[TString, TInt, TInt], result=TString, extern=true}),
-    ("concat", Func{level=mainLevel, label="concat",
+    ("concat", Func{level=topLevel(), label="concat",
       formals=[TString, TString], result=TString, extern=true}),
-    ("not", Func{level=mainLevel, label="not",
+    ("not", Func{level=topLevel(), label="not",
       formals=[TInt], result=TInt, extern=true}),
-    ("exit", Func{level=mainLevel, label="exit",
+    ("exit", Func{level=topLevel(), label="exit",
       formals=[TInt], result=TUnit, extern=true})
   ])
 
@@ -176,7 +182,7 @@ structure seman :> seman = struct
               (* verifica que la variable no sea RO *)
               val _ = case var of
                 SimpleVar s => (case tabBusca (s, venv) of
-                  SOME VIntRO => error ("asignación de variable índice de for \""^s^"\"", nl)
+                  SOME (VIntRO _) => error ("asignación de variable índice de for \""^s^"\"", nl)
                   | _ => ())
                 | _ => ()
                   
@@ -228,7 +234,7 @@ structure seman :> seman = struct
             end
         | trexp (ForExp ({var, escape, lo, hi, body}, nl)) =
             let
-              val venv' = tabInserta (var, VIntRO, venv)
+              val venv' = tabInserta (var, VIntRO {access=TODO, level=0}, venv)
               val {exp=explo, ty=tylo} = trexp lo
               val {exp=exphi, ty=tyhi} = trexp hi
               (* val _ = preWhileFor() *)
@@ -277,8 +283,8 @@ structure seman :> seman = struct
             let
               val tipo = case tabBusca (s, venv) of
                 NONE => error ("variable inexistente \""^s^"\"", nl)
-                | SOME VIntRO => TInt
-                | SOME (Var {ty}) => ty
+                | SOME (VIntRO _) => TInt
+                | SOME (Var {ty,access,level}) => ty
                 | _ => error ("se esperaba que \""^s^"\" fuese una variable", nl)
             in
               {exp=SCAF, ty=tipo}
@@ -321,7 +327,7 @@ structure seman :> seman = struct
               val {exp=expinit, ty=tyinit} = transExp (venv, tenv) init
               val _ = if tyinit<>TUnit andalso tyinit<>TNil then ()
                       else error ("inicialización incorrecta de variable \""^name^"\"", nl)
-              val venv' = tabRInserta (name, Var {ty=tyinit}, venv)
+              val venv' = tabRInserta (name, Var {ty=tyinit, access=TODO, level=0}, venv)
             in
               (venv', tenv, [{exp=SCAF, ty=tyinit}])
             end
@@ -333,7 +339,7 @@ structure seman :> seman = struct
                 | NONE => error ("tipo inexistente \""^s^"\"", nl)
               val _ = if tiposIguales tyvar tyinit then () 
                       else error ("tipo \""^s^"\" no compatible con inicialización", nl)
-              val venv' = tabRInserta (name, Var {ty=tyvar}, venv)
+              val venv' = tabRInserta (name, Var {ty=tyvar, access=TODO, level=0}, venv)
             in
               (venv', tenv, [{exp=SCAF, ty=tyvar}]) (*TODO qué es la lista que devuelve trdec*)
             end
@@ -374,14 +380,15 @@ structure seman :> seman = struct
                   val fs = List.map (paramToTipo nl) params
                   val r = resultToTipo nl result
                 in
-                  (name, Func {level=(), label=newLabel(), formals=fs, result=r, extern=false})
+                  (* TODO reemplazar topLevel() por lo que corresponda *)
+                  (name, Func {level=topLevel(), label=newLabel(), formals=fs, result=r, extern=false})
                 end
               
               (* crea nuevo entorno con la declaración de las funciones del batch *)
               val venv' = tabInserList (venv, (List.map trfn fs))
               
               (* traduce un parámetro de función a su EnvEntry de tipo Var *)
-              fun paramToVar nl p = (#name(p), Var {ty=paramToTipo nl p})
+              fun paramToVar nl p = (#name(p), Var {ty=paramToTipo nl p, access=TODO, level=0})
               
               (* traduce una función y verifica el tipo de retorno *)
               fun trbody ({name,params,result,body}, nl) = 

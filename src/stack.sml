@@ -4,6 +4,8 @@ structure stack :> stack = struct
 
   fun nuevaPila() = ref []
 
+  fun nuevaPila1 item = ref [item]
+
   fun pushPila pila item = 
         pila := (item::(!pila))
 

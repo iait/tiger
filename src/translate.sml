@@ -11,6 +11,7 @@ structure translate :> translate = struct
 
   type level = {parent: frame option, frame: frame, level: int}
   type access = frame.access
+  val TODO : access = todo
   type frag = frame.frag
 
   val fragList = ref ([]: frag list)
@@ -100,8 +101,7 @@ structure translate :> translate = struct
 
   (* While y for necesitan la última etiqueta para un break *)
   local
-    val salidas: label option Pila = nuevaPila()
-    val _ = pushPila salidas NONE
+    val salidas: label option Pila = nuevaPila1 NONE
   in
     val pushSalida = pushPila salidas
     fun popSalida() = popPila salidas

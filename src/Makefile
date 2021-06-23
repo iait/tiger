@@ -74,7 +74,7 @@ topsort.ui: table.ui ast.uo typ.uo
 frame.uo: frame.ui temp.ui tree.uo 
 parser.uo: parser.ui line.uo ast.uo 
 seman.uo: seman.ui table.ui translate.ui entry.uo topsort.ui printtyp.ui \
-    ast.uo error.uo util.ui typ.uo 
+    ast.uo error.uo stack.ui util.ui typ.uo 
 printtyp.uo: printtyp.ui table.ui typ.uo 
 it.uo: table.ui tree.uo 
 frame.ui: temp.ui tree.uo 
@@ -82,7 +82,7 @@ lexer.uo: parser.ui line.uo
 test.uo: parser.ui printast.ui seman.ui lexer.uo line.uo ast.uo error.uo \
     escape.ui 
 translate.ui: temp.ui frame.ui ast.uo tree.uo 
-entry.uo: table.ui temp.ui ast.uo typ.uo 
+entry.uo: table.ui translate.ui temp.ui ast.uo typ.uo 
 escape.ui: ast.uo 
 printast.uo: printast.ui ast.uo 
 main.uo: parser.ui printast.ui seman.ui lexer.uo line.uo error.uo escape.ui 

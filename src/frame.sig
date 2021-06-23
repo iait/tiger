@@ -5,6 +5,7 @@ signature frame = sig
 
   datatype access = InFrame of int 
                   | InReg of temp.temp
+                  | todo
 
   datatype frag = PROC of {body: tree.stm, frame: frame}
                 | STRING of temp.label * string

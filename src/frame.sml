@@ -30,6 +30,7 @@ structure frame :> frame = struct
 
   datatype access = InFrame of int 
                   | InReg of temp.temp
+                  | todo
 
   datatype frag = PROC of {body: tree.stm, frame: frame}
                 | STRING of temp.label * string
@@ -78,6 +79,7 @@ structure frame :> frame = struct
 
   fun exp (InFrame k) e = MEM (BINOP (PLUS, TEMP fp, CONST k))
     | exp (InReg l) e = TEMP l
+    | exp todo e = raise Fail "TODO!"
 
   fun externalCall (s, l) = CALL (NAME s, l)
 
