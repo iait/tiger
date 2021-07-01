@@ -3,13 +3,6 @@ structure temp :> temp = struct
   type label = string
   type temp = string
 
-  fun makeString s =
-    let
-      val largo = Int.toString ((size s) + 1)
-    in
-      "\n\t.long "^largo^" \""^s^"\"\n"
-    end
-
   local
     val i = ref 0
     val j = ref 0
@@ -28,5 +21,7 @@ structure temp :> temp = struct
         j := !j+1; s
       end
   end
+  
+  fun namedLabel s = s
 
 end

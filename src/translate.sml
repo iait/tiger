@@ -110,7 +110,9 @@ structure translate :> translate = struct
           | NONE => raise Fail "break incorrecto!"
   end
 
+  (* datos globales: lista de fragmentos *)
   val datosGlobs = ref ([]: frag list)
+  
   fun procEntryExit{level: level, body} =
     let val label = STRING(name(#frame level), "")
       val body' = PROC{frame= #frame level, body=unNx body}
@@ -118,23 +120,15 @@ structure translate :> translate = struct
     in  datosGlobs:=(!datosGlobs@[label, body', final]) end
   fun getResult() = !datosGlobs
   
-  fun stringLen s =
+  fun stringExp (s: string) =
     let
-      fun aux [] = 0
-        | aux (t1::t2::t3::t4::t) = 
-            if t1=(#"\\") andalso t2=(#"x") then 1 + (aux t)
-            else 1 + (aux (t2::t3::t4::t))
-        | aux (_::t) = 1 + (aux t)
+      val l = newLabel()
+      val newFrag : frag = newStringFrag l s
+      val _ = datosGlobs := (newFrag::(!datosGlobs))
     in
-      aux (explode s)
+      Ex (NAME l)
     end
-  
-  fun stringExp(s: string) =
-    let val l = newLabel()
-      val len = ".long "^makestring(stringLen s)
-      val str = ".string \""^s^"\""
-      val _ = datosGlobs:=(!datosGlobs @ [STRING(l, len), STRING("", str)])
-    in  Ex(NAME l) end
+
   fun preFunctionDec() =
     (pushSalida(NONE);
     actualLevel := !actualLevel+1)
