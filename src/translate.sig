@@ -8,14 +8,23 @@ signature translate = sig
   val TODO : access
   type frag = frame.frag
 
+  (* level de _tigermain *)
   val outermost : level
+  
+  (* crea un nuevo level a partir del level padre *)
   val newLevel : 
     {parent: level, name: temp.label, formals: bool list} -> level
     
-  (*  *)
+  (* crea lista de accesos para los parámetros de una función *)
   val formals : level -> access list
+  
+  (* obtiene el level actual *)
   val getActualLev : unit -> int
+  
+  (* TODO *)
   val allocArg : level -> bool -> access
+  
+  (* crea un acceso para una variable local *)
   val allocLocal : level -> bool -> access
 
   type exp 

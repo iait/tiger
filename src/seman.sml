@@ -322,27 +322,30 @@ structure seman :> seman = struct
   (* traducción de declaraciones *)
   and transDec (venv, tenv) =
     let
-      fun trdec (VarDec ({name, escape, typ=NONE, init}, nl)) =
+(******** traduce declaración de variable ********)
+      fun trdec (VarDec ({name, escape, typ, init}, nl)) =
             let
               val {exp=expinit, ty=tyinit} = transExp (venv, tenv) init
-              val _ = if tyinit<>TUnit andalso tyinit<>TNil then ()
-                      else error ("inicialización incorrecta de variable \""^name^"\"", nl)
-              val venv' = tabRInserta (name, Var {ty=tyinit, access=TODO, level=0}, venv)
+              val _ = case typ of
+                NONE => if tyinit<>TUnit andalso tyinit<>TNil then ()
+                        else error ("inicialización incorrecta de variable \""^name^"\"", nl)
+                | SOME s => (case tabBusca (s, tenv) of
+                    NONE => error ("tipo inexistente \""^s^"\"", nl)
+                    | SOME tyvar => if tiposIguales tyvar tyinit then () 
+                                    else error ("tipo \""^s^"\" no compatible con init", nl))
+              val acc = allocLocal (topLevel()) (!escape)
+              val entry = Var {
+                ty = tyinit, 
+                access = acc,
+                level = getActualLev()
+              }
+              val venv' = tabRInserta (name, entry, venv)
+              val exp = assignExp {var = (varDec acc), exp = expinit} 
             in
-              (venv', tenv, [{exp=SCAF, ty=tyinit}])
+              (venv', tenv, [exp])
             end
-        | trdec (VarDec ({name, escape, typ=SOME s, init}, nl)) =
-            let
-              val {exp=expinit, ty=tyinit} = transExp (venv, tenv) init
-              val tyvar = case tabBusca (s, tenv) of
-                SOME t => t
-                | NONE => error ("tipo inexistente \""^s^"\"", nl)
-              val _ = if tiposIguales tyvar tyinit then () 
-                      else error ("tipo \""^s^"\" no compatible con inicialización", nl)
-              val venv' = tabRInserta (name, Var {ty=tyvar, access=TODO, level=0}, venv)
-            in
-              (venv', tenv, [{exp=SCAF, ty=tyvar}]) (*TODO qué es la lista que devuelve trdec*)
-            end
+
+(******** traduce declaración de tipos ********)
         | trdec (TypeDec []) = raise Fail "no debería pasar!"
         | trdec (TypeDec (ts as (_,nl)::_)) =
             let
@@ -353,6 +356,9 @@ structure seman :> seman = struct
             in
               (venv, tenv', [])
             end
+
+(******** traduce declaración de funciones ********)
+        | trdec (FunctionDec []) = raise Fail "no debería pasar!"
         | trdec (FunctionDec fs) =
             let
               (* Verifica que no haya funciones repetidas en el batch *)
@@ -379,9 +385,12 @@ structure seman :> seman = struct
                     error ("la función \""^name^"\" tiene el parámetro duplicado \""^s^"\"", nl) 
                   val fs = List.map (paramToTipo nl) params
                   val r = resultToTipo nl result
+                  val formals = List.map (fn f => !(#escape(f))) params
+                  val lev = newLevel {parent=topLevel(), name=name, formals=formals}
+                  val entry = Func {
+                    level=lev, label=newLabel(), formals=fs, result=r, extern=false}
                 in
-                  (* TODO reemplazar topLevel() por lo que corresponda *)
-                  (name, Func {level=topLevel(), label=newLabel(), formals=fs, result=r, extern=false})
+                  (name, entry)
                 end
               
               (* crea nuevo entorno con la declaración de las funciones del batch *)
@@ -398,7 +407,7 @@ structure seman :> seman = struct
                   val {exp,ty} = transExp (venv'', tenv) body
                   val tyresult = resultToTipo nl result
                 in
-                  if tiposIguales ty tyresult then {exp=exp, ty=ty}
+                  if tiposIguales ty tyresult then exp
                   else (error ("cuerpo de la función \""^name^"\" incorrecto", nl))
                 end
               

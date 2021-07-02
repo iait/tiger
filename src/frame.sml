@@ -7,7 +7,7 @@
         |    ...      |
         |    arg8     |    fp+32
         |    arg7     |    fp+24
-        | static link |    fp+16 (fp del nivel estátoco anterior del llamado)
+        | static link |    fp+16 (fp del nivel estático anterior del llamado)
         |  retorno    |    fp+8
         |   fp ant    |    fp
         ---------------

@@ -8,32 +8,41 @@ structure translate :> translate = struct
 
   exception Break
   exception DivByZero
-
+  
+  (* nivel de anidamiento estático *)
   type level = {parent: frame option, frame: frame, level: int}
+  
+  (* acceso a la variable *)
   type access = frame.access
   val TODO : access = todo
+  
   type frag = frame.frag
 
   val fragList = ref ([]: frag list)
 
+  (* nivel de anidamiento actual y función para accederlo *)
   val actualLevel = ref ~1 (* _tigermain debe tener level = 0. *)
   fun getActualLev() = !actualLevel
 
+  (* level compartido por todas las funciones de la standar library
+   * que también será el level padre de _tigermain
+   *)
   val outermost: level = {
     parent = NONE,
-    frame = newFrame {name="_tigermain", formals=[]},
+    frame = newFrame {name="outermost", formals=[]},
     level = getActualLev()
   }
 
+  (* crea un nuevo level a partir del level padre *)
   fun newLevel {parent={parent, frame, level}, name, formals} = {
     parent = SOME frame,
     frame = newFrame {name=name, formals=formals},
-    level = level + 1}
+    level = level + 1
+  }
 
+  (* TODO *)
   fun allocArg {parent, frame, level} b = frame.allocArg frame b
-
   fun allocLocal {parent, frame, level} b = frame.allocLocal frame b
-
   fun formals {parent, frame, level} = frame.formals frame
 
   datatype exp = Ex of tree.exp
