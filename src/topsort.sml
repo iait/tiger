@@ -67,7 +67,10 @@ structure topsort :> topsort = struct
             (* verifica que el record no tenga campos duplicados *)
             val _ = hasDup fl handle Duplicated s => 
               raise Fail ("el record \""^name^"\" tiene el campo duplicado \""^s^"\"")
-            val fields = List.map (fn {name,escape,typ} => (name, ref (TTipo typ))) fl
+            (* arma los fields del tipo record *)
+            fun aux ([], _) = []
+              | aux ({name,escape,typ}::t, n) = (name, ref (TTipo typ), n)::(aux (t, n+1))
+            val fields = aux (fl, 0)
           in
             tabMete (name, TRecord (fields, ref()), env)
           end
@@ -77,7 +80,7 @@ structure topsort :> topsort = struct
 
       (* completa las referencias de los fields de un tipo record *)
       fun fillRef (TRecord ([], _)) = ()
-        | fillRef (TRecord ((_, r)::fl, u)) = (case !r of 
+        | fillRef (TRecord ((_, r, _)::fl, u)) = (case !r of 
             TTipo s => (case tabBusca (s, env) of 
                 SOME t => (r:=t; fillRef (TRecord (fl, u)))
                 | NONE => raise Fail ("no existe el tipo \""^s^"\""))

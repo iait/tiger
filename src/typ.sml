@@ -8,7 +8,7 @@ structure typ = struct
     | TInt
     | TString
     | TArray of Tipo * unique
-    | TRecord of (string * Tipo ref) list * unique
+    | TRecord of (string * Tipo ref * int) list * unique
     | TTipo of string
 
 end

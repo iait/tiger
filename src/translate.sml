@@ -40,7 +40,7 @@ structure translate :> translate = struct
     level = level + 1
   }
 
-  (* TODO *)
+  (* TODO por qué se llama parent??? no sería el level actual *)
   fun allocArg {parent, frame, level} b = frame.allocArg frame b
   fun allocLocal {parent, frame, level} b = frame.allocLocal frame b
   fun formals {parent, frame, level} = frame.formals frame
@@ -51,50 +51,57 @@ structure translate :> translate = struct
                | scaf
   val SCAF = scaf
 
+  (* seq : tree.stm list -> tree.stm *)
   fun seq [] = EXP (CONST 0)
     | seq [s] = s
     | seq (x::xs) = SEQ (x, seq xs)
 
+  (* unEx : trans.exp -> tree.exp *)
   fun unEx (Ex e) = e
-    | unEx (Nx s) = ESEQ(s, CONST 0)
+    | unEx (Nx s) = ESEQ (s, CONST 0)
     | unEx (Cx cf) =
-    let
-      val r = newTemp()
-      val t = newLabel()
-      val f = newLabel()
-    in
-      ESEQ(seq [MOVE(TEMP r, CONST 1),
-        cf (t, f),
-        LABEL f,
-        MOVE(TEMP r, CONST 0),
-        LABEL t],
-        TEMP r)
-    end
-    | unEx scaf = raise Fail "SCAF!"
+        let
+          val r = newTemp()
+          val t = newLabel()
+          val f = newLabel()
+        in
+          ESEQ (
+            seq [
+              MOVE (TEMP r, CONST 1),
+              cf (t, f),
+              LABEL f,
+              MOVE (TEMP r, CONST 0),
+              LABEL t],
+            TEMP r)
+        end
 
+  (* unNx : trans.exp -> tree.stm *)
   fun unNx (Ex e) = EXP e
     | unNx (Nx s) = s
     | unNx (Cx cf) =
-    let
-      val t = newLabel()
-      val f = newLabel()
-    in
-      seq [cf(t,f),
-        LABEL t,
-        LABEL f]
-    end
-    | unNx scaf = raise Fail "SCAF!"
+        let
+          val t = newLabel()
+          val f = newLabel()
+        in
+          seq [
+            cf (t,f),
+            LABEL t,
+            LABEL f]
+        end
 
-  fun unCx (Nx s) = raise Fail ("Error (UnCx(Nx..))")
+  (* unCx : trans.exp -> (label * label -> tree.stm) *)
+  fun unCx (Nx s) = raise Fail ("Error: unCx (Nx...)")
     | unCx (Cx cf) = cf
     | unCx (Ex (CONST 0)) =
-    (fn (t,f) => JUMP(NAME f, [f]))
+        (fn (t,f) => JUMP (NAME f, [f]))
     | unCx (Ex (CONST _)) =
-    (fn (t,f) => JUMP(NAME t, [t]))
+        (fn (t,f) => JUMP (NAME t, [t]))
     | unCx (Ex e) =
-    (fn (t,f) => CJUMP(NE, e, CONST 0, t, f))
-    | unCx scaf = raise Fail "SCAF!"
+        (fn (t,f) => CJUMP(NE, e, CONST 0, t, f))
 
+(************************************************)
+(********** Intermediate representation *********)
+(************************************************)
   fun Ir(e) =
     let fun aux(Ex e) = it.tree(EXP e)
       | aux(Nx s) = it.tree(s)
@@ -108,27 +115,72 @@ structure translate :> translate = struct
     in  aux3 e end
   fun nombreFrame frame = print(".globl " ^ frame.name frame ^ "\n")
 
-  (* While y for necesitan la última etiqueta para un break *)
-  local
-    val salidas: label option Pila = nuevaPila1 NONE
-  in
-    val pushSalida = pushPila salidas
-    fun popSalida() = popPila salidas
-    fun topSalida() = case topPila salidas of
-          SOME l => l
-          | NONE => raise Fail "break incorrecto!"
-  end
+(***********************************************)
+(********** Traducción de expresiones **********)
+(***********************************************)
 
-  (* datos globales: lista de fragmentos *)
-  val datosGlobs = ref ([]: frag list)
+(*************** variables ***************)
+
+ (* simpleVar : trans.access * int -> trans.exp
+   * acc: cómo acceder a la variable desde su fp
+   * lev: nivel de declaración de la variable
+   *)
+  fun simpleVar (acc, lev) =
+    let
+      (* distancia entre el nivel de declaración y uso *)
+      val dist = getActualLev() - lev
+      (* genera expr para acceder al fp de n niveles menos *)
+      fun aux 0 = TEMP fp
+        | aux n = MEM (BINOP (PLUS, aux (n-1), CONST fpPrevLev))
+    in
+      Ex (frame.exp acc (aux dist))
+    end
   
-  fun procEntryExit{level: level, body} =
-    let val label = STRING(name(#frame level), "")
-      val body' = PROC{frame= #frame level, body=unNx body}
-      val final = STRING(";;-------", "")
-    in  datosGlobs:=(!datosGlobs@[label, body', final]) end
-  fun getResult() = !datosGlobs
+  (* fieldVar : trans.exp * int -> trans.exp
+   * var: expresión del record
+   * field: índice del field a acceder
+   *)
+  fun fieldVar (var, field) = 
+    let
+      val r = unEx var
+      val rr = newTemp()
+      val checkNil = EXP (externalCall ("_checkNil", [TEMP rr]))
+      val exp = case field of
+        0 => MEM (TEMP rr)
+        | n => MEM (BINOP (PLUS, TEMP rr, CONST (n * frame.wSz)))
+    in
+      Ex (ESEQ (
+        seq[
+          MOVE (TEMP rr, r),
+          checkNil],
+        exp))
+    end
   
+  (* subscriptVar : trans.exp * trans.exp -> trans.exp *)
+  fun subscriptVar (arr, ind) =
+    let
+      val a = unEx arr
+      val i = unEx ind
+      val ra = newTemp()
+      val ri = newTemp()
+    in
+      Ex (ESEQ (
+        seq[
+          MOVE (TEMP ra, a),
+          MOVE (TEMP ri, i),
+          EXP (externalCall ("_checkIndex", [TEMP ra, TEMP ri]))],
+        MEM (BINOP (PLUS, TEMP ra,
+          BINOP (MUL, TEMP ri, CONST frame.wSz)))))
+    end
+
+(*************** constantes ***************)
+
+  fun unitExp() = Ex (CONST 0)
+
+  fun nilExp() = Ex (CONST 0)
+
+  fun intExp i = Ex (CONST i)
+
   fun stringExp (s: string) =
     let
       val l = newLabel()
@@ -138,127 +190,350 @@ structure translate :> translate = struct
       Ex (NAME l)
     end
 
-  fun preFunctionDec() =
-    (pushSalida(NONE);
-    actualLevel := !actualLevel+1)
-  fun functionDec(e, l, proc) =
-    let val body =
-          if proc then unNx e
-          else MOVE(TEMP rv, unEx e)
-      val body' = procEntryExit1(#frame l, body)
-      val () = procEntryExit{body=Nx body', level=l}
-    in  Ex(CONST 0) end
-  fun postFunctionDec() =
-    (popSalida(); actualLevel := !actualLevel-1)
-  
-  fun unitExp() = Ex (CONST 0)
-  
-  fun nilExp() = Ex (CONST 0)
-  
-  fun intExp i = Ex (CONST i)
-  
-  fun simpleVar(acc, nivel) =
-    SCAF (*COMPLETAR*)
-  
-  fun varDec(acc) = simpleVar(acc, getActualLev())
-  
-  fun fieldVar(var, field) = 
-    SCAF (*COMPLETAR*)
-  
-  fun subscriptVar(arr, ind) =
-  let
-    val a = unEx arr
-    val i = unEx ind
-    val ra = newTemp()
-    val ri = newTemp()
-  in
-    Ex( ESEQ(seq[MOVE(TEMP ra, a),
-      MOVE(TEMP ri, i),
-      EXP(externalCall("_checkindex", [TEMP ra, TEMP ri]))],
-      MEM(BINOP(PLUS, TEMP ra,
-        BINOP(MUL, TEMP ri, CONST frame.wSz)))))
-  end
-  
+(*************** llamada a función ***************)
+
+  (* val callExp : {name: temp.label, extern: bool, proc: bool, lev: int, args: trans.exp list}
+     -> trans.exp *)
+  fun callExp {name, extern, proc, lev, args} = 
+    let
+      (* función para calcular el static link *)
+      fun staticLink callerLev calleeLev =
+        let
+          fun aux 0 = MEM (BINOP (PLUS, TEMP frame.fp, CONST fpPrevLev))
+            | aux n = MEM (BINOP (PLUS, aux (n-1), CONST fpPrevLev))
+        in
+          if callerLev = calleeLev - 1 then
+            TEMP frame.fp
+          else if callerLev >= calleeLev then
+            aux (callerLev - calleeLev)
+          else
+            raise Fail "no debería pasar: callerLev < calleeLev - 1"
+        end
+
+      (* función para preparar los argumentos como CONST, NAME o TEMP *)
+      fun prepArgs [] stms exps = (stms, exps)
+        | prepArgs (hd::tl) stms exps = case unEx hd of
+            CONST c => prepArgs tl stms ((CONST c)::exps)
+            | NAME l => prepArgs tl stms ((NAME l)::exps)
+            | TEMP r => prepArgs tl stms ((TEMP r)::exps)
+            | e => let 
+                     val temp = newTemp() 
+                   in 
+                     prepArgs tl (MOVE (TEMP temp, e)::stms) (TEMP temp:: exps)
+                   end
+
+      (* sentencias y expresiones de argumentos preparados *)
+      val (argStms, argExps) = prepArgs args [] []
+
+      (* agrega el static link si la función NO es externa *)
+      val argExps' = 
+        if extern then argExps
+        else (staticLink (getActualLev()) lev)::argExps
+
+      (* crea un temporal para el retorno si la función devuelve algo *)
+      val returnTemp = if proc then NONE else SOME newTemp()
+    in
+      if proc then 
+        Nx (seq (argStms @ [CALL (NAME name, argExps')]))
+      else 
+        Ex (ESEQ (
+          seq (argStms @ [
+            CALL (NAME name, argExps'),
+            MOVE (TEMP (valOf returnTemp), TEMP frame.rv)]), 
+          TEMP (valOf returnTemp)))
+    end
+
+(*************** operaciones binarias ***************)
+
+  (* binOpIntExp : {left:trans.exp, oper:ast.oper, right:trans.exp} -> trans.exp *)
+  fun binOpIntExp {left, oper, right} = 
+    let
+      val binop = case oper of
+        PlusOp => PLUS
+        | MinusOp => MINUS
+        | TimesOp => MUL
+        | DivideOp => DIV
+        | _ => raise "Invocación binOpIntExp con operador inválido"
+    in
+      Ex (BINOP (binop, unEx left, unEx right))
+    end
+
+  (* binOpIntRelExp: {left:trans.exp, oper:ast.oper, right:trans.exp} -> trans.exp *)
+  fun binOpIntRelExp {left,oper,right} =
+    let
+      val relop = case oper of
+        EqOp => EQ
+        | NeqOp => NE
+        | LtOp => LT
+        | LeOp => LE
+        | GtOp => GT
+        | GeOp => GE
+        | _ => raise "Invocación binOpIntRelExp con operador inválido"
+    in
+      Cx (fn (t, f) => CJUMP (relop, unEx left, unEx right, t, f))
+    end
+
+  (* binOpStrExp : {left:trans.exp, oper:ast.oper, right:trans.exp} -> trans.exp *)
+  fun binOpStrExp {left,oper,right} =
+    let
+      val relop = case oper of
+        EqOp => EQ
+        | NeqOp => NE
+        | LtOp => LT
+        | LeOp => LE
+        | GtOp => GT
+        | GeOp => GE
+        | _ => raise "Invocación binOpStrExp con operador inválido"
+      val stringCompareCall = externalCall ("_stringCompare", [unEx left, unEx right])
+    in
+      Cx (fn (t, f) => CJUMP (relop, stringCompareCall, CONST 0, t, f))
+    end
+
+    (* nilCompare : {record:trans.exp, oper:ast.oper} -> trans.exp *)
+    fun nilCompare record =
+      let
+        val relop = case oper of
+          EqOp => EQ
+          | NeqOp => NE
+          | _ => raise "Invocación nilCompare con operador inválido"
+        val nilCompare = externalCall ("_nilCompare", [unEx record])
+      in
+        Cx (fn (t, f) => CJUMP (relop, nilCompare, CONST 0, t, f))
+      end
+
+(*************** inicialización de record y array ***************)
+
+  (* recordExp : (trans.exp * int) list -> trans.exp *)
   fun recordExp l =
-    SCAF (*COMPLETAR*)
-  
-  fun arrayExp{size, init} =
-  let
-    val s = unEx size
-    val i = unEx init
+    let
+      val recordAddr = newTemp()
+      fun initRecord [] = []
+        | initRecord ((e, i)::tl) = 
+            MOVE (BINOP (PLUS, TEMP recordAddr, i * frame.wSz), unEx e)
+      val initStms = initRecord l
+      val allocRecord = externalCall ("_allocRecord", [CONST (List.length l)])
+    in
+      Ex (ESEQ (
+        seq ((MOVE (TEMP recordAddr, allocRecord))::initStms),
+        TEMP recordAddr))
+    end
+
+  (* arrayExp : {size: trans.exp, init: trans.exp} -> trans.exp *)
+  fun arrayExp {size, init} =
+    let
+      val sizeExp = unEx size
+      val initExp = unEx init
+    in
+      Ex (externalCall ("_allocArray", [sizeExp, initExp]))
+    end
+
+(*************** condicionales if ***************)
+
+  (* ifThenExp : {test: trans.exp, then': trans.exp} -> trans.exp *)
+  fun ifThenExp {test, then'} =
+    let
+      val thenLabel = newLabel()
+      val joinLabel = newLabel()
+      val condFunc = unCx test
+      val thenStm = unNx then'
+    in
+      Nx (seq [
+          condFunc (thenLabel, joinLabel),
+          LABEL thenLabel,
+          thenStm,
+          LABEL joinLabel])
+    end
+
+  (* ifThenElseExp : {test: trans.exp, then': trans.exp, else': trans.exp} -> trans.exp *)
+  fun ifThenElseExp {test, then', else'} =
+    let
+      val thenLabel = newLabel()
+      val elseLabel = newLabel()
+      val joinLabel = newLabel()
+      val returnTemp = newTemp()
+      val condFunc = unCx test
+      val thenExp = unEx then'
+      val elseExp = unEx else'
+    in
+      Ex (ESEQ (
+        seq [
+          condFunc (thenLabel, elseLabel),
+          LABEL thenLabel,
+          MOVE (TEMP returnTemp, thenExp),
+          JUMP (NAME joinLabel, [joinLabel]),
+          LABEL elseLabel,
+          MOVE (TEMP returnTemp, elseExp),
+          LABEL joinLabel],
+        TEMP returnTemp))
+    end
+
+  (* ifThenElseExpUnit : {test: trans.exp, then': trans.exp, else': trans.exp} -> trans.exp *)
+  fun ifThenElseExpUnit {test, then', else'} =
+    let
+      val thenLabel = newLabel()
+      val elseLabel = newLabel()
+      val joinLabel = newLabel()
+      val condFunc = unCx test
+      val thenStm = unNx then'
+      val elseStm = unNx else'
+    in
+      Nx (seq [
+          condFunc (thenLabel, elseLabel),
+          LABEL thenLabel,
+          thenStm,
+          JUMP (NAME joinLabel, [joinLabel]),
+          LABEL elseLabel,
+          elseStm,
+          LABEL joinLabel])
+    end
+
+(*************** ciclos while y for ***************)
+
+  (* while y for necesitan la última etiqueta para un break *)
+  local
+    val salidas: label option Pila = nuevaPila1 NONE
   in
-    Ex (externalCall("allocArray", [s, i]))
+    fun pushSalida l = pushPila salidas (SOME l)
+    fun popSalida() = popPila salidas
+    fun topSalida() = case topPila salidas of
+          SOME l => l
+          | NONE => raise Break
   end
-  
-  fun callExp (name,external,isproc,lev:level,ls) = 
-    Ex (CONST 0) (*COMPLETAR*)
-  
-  fun letExp ([], body) = Ex (unEx body)
-   |  letExp (inits, body) = Ex (ESEQ(seq inits,unEx body))
+
+  fun preLoopExp() = pushSalida (newLabel())
   
   fun breakExp() = 
-    SCAF (*COMPLETAR*)
+    let
+      val doneLabel = topSalida()
+    in
+      Nx (JUMP (NAME doneLabel, [doneLabel]))
+    end
   
-  fun seqExp ([]:exp list) = Nx (EXP(CONST 0))
-    | seqExp (exps:exp list) =
+  fun postLoopExp() = popSalida()
+  
+  (* whileExp : {test: trans.exp, body: trans.exp} -> trans.exp *)
+  fun whileExp {test: exp, body: exp} =
+    let
+      val condFunc = unCx test
+      val bodyExp = unNx body
+      val testLabel = newLabel()
+      val bodyLabel = newLabel()
+      val doneLabel = topSalida()
+    in
+      Nx (seq[
+        LABEL testLabel,
+        cf (bodyLabel, doneLabel),
+        LABEL bodyLabel,
+        bodyExp,
+        JUMP (NAME testLabel, [testLabel]),
+        LABEL doneLabel])
+    end
+  
+  (* forExp : {lo: trans.exp, hi: trans.exp, body: trans.exp} -> trans.exp *)
+  fun forExp {lo, hi, body} =
+    let
+      val loTemp = newTemp()
+      val hiTemp = newTemp()
+      val varTemp = newTemp()
+      val loExp = unEx lo
+      val hiExp = unEx hi
+      val bodyExp = unNx body
+      val testLabel = newLabel()
+      val bodyLabel = newLabel()
+      val doneLabel = topSalida()
+    in
+      Nx (seq [
+        MOVE (TEMP loTemp, loExp),
+        MOVE (TEMP hiTemp, hiExp),
+        EXP (externalCall ("_checkFor", [TEMP loTemp, TEMP hiTemp])),
+        MOVE (TEMP varTemp, loExp),
+        LABEL testLabel,
+        CJUMP (LE, TEMP varTemp, TEMP hiTemp, bodyLabel, doneLabel),
+        LABEL bodyLabel,
+        bodyExp,
+        MOVE (TEMP varTemp, BINOP (PLUS, TEMP varTemp, CONST 1)),
+        JUMP (NAME testLabel, [testLabel]),
+        LABEL doneLabel])
+    end
+
+(*************** declaraciones let ***************)
+
+  (* letExp : trans.exp list * trans.exp -> trans.exp *)
+  fun letExp ([], body) = Ex (unEx body)
+    | letExp (decs, body) = Ex (ESEQ (seq (map unNx decs), unEx body))
+
+(*************** secuencia ***************)
+  
+  (* seqExp : trans.exp list -> trans.exp *)
+  fun seqExp ([]: exp list) = Nx (EXP (CONST 0))
+    | seqExp (exps: exp list) =
       let
-        fun unx [e] = []
+        fun unx [] = raise Fail "no debería recibir lista vacía"
+          | unx [e] = []
           | unx (s::ss) = (unNx s)::(unx ss)
-          | unx[] = []
       in
         case List.last exps of
           Nx s =>
             let val unexps = map unNx exps
             in Nx (seq unexps) end
-          | Ex e => Ex (ESEQ(seq(unx exps), e))
-          | cond => Ex (ESEQ(seq(unx exps), unEx cond))
+          | Ex e => Ex (ESEQ (seq (unx exps), e))
+          | cond => Ex (ESEQ (seq (unx exps), unEx cond))
       end
-  
-  fun preWhileForExp() = pushSalida(SOME(newLabel()))
-  
-  fun postWhileForExp() = (popSalida(); ())
-  
-  fun whileExp {test: exp, body: exp, lev:level} =
-  let
-    val cf = unCx test
-    val expb = unNx body
-    val (l1, l2, l3) = (newLabel(), newLabel(), topSalida())
-  in
-    Nx (seq[LABEL l1,
-      cf(l2,l3),
-      LABEL l2,
-      expb,
-      JUMP(NAME l1, [l1]),
-      LABEL l3])
-  end
-  
-  fun forExp {lo, hi, var, body} =
-    SCAF (*COMPLETAR*)
-  
-  fun ifThenExp{test, then'} =
-    SCAF (*COMPLETAR*)
-  
-  fun ifThenElseExp {test,then',else'} =
-    SCAF (*COMPLETAR*)
-  
-  fun ifThenElseExpUnit {test,then',else'} =
-    SCAF (*COMPLETAR*)
-  
-  fun assignExp{var, exp} =
-  let
-    val v = unEx var
-    val vl = unEx exp
-  in
-    Nx (MOVE(v,vl))
-  end
-  
-  fun binOpIntExp {left, oper, right} = 
-    SCAF (*COMPLETAR*)
-  
-  fun binOpIntRelExp {left,oper,right} =
-    SCAF (*COMPLETAR*)
-  
-  fun binOpStrExp {left,oper,right} =
-    SCAF (*COMPLETAR*)
+
+(*************** asignación ***************)
+
+  (* assignExp : {var: trans.exp, exp: trans.exp} -> trans.exp *)
+  fun assignExp {var, exp} =
+    let
+      val v = unEx var
+      val vl = unEx exp
+    in
+      Nx (MOVE (v, vl))
+    end
+
+(*************** declaración de variable ***************)
+
+  (* varDec : trans.access -> trans.exp *)
+  fun varDec acc = simpleVar (acc, getActualLev())
+
+(*************** declaración de función ***************)
+
+  (* datos globales: lista de fragmentos *)
+  val datosGlobs = ref ([]: frag list)
+
+  (* procEntryExit : {level: trans.level, body: trans.exp} -> unit *)
+  fun procEntryExit {level: level, body: exp} =
+    let
+      val frame = #frame(level)
+      val label = STRING (name frame, "")
+      val proc = PROC {frame = frame, body = unNx body}
+      val final = STRING ("#############", "")
+    in  
+      datosGlobs := (!datosGlobs @ [label, proc, final])
+    end
+
+  fun getResult() = !datosGlobs
+
+  (* preFunctionDec : unit -> unit *)
+  fun preFunctionDec() = (
+    pushSalida NONE;
+    actualLevel := !actualLevel+1)
+
+  (* functionDec : trans.exp * trans.level * bool -> unit *)
+  fun functionDec (exp, lev, proc) =
+    let
+      val frame = #frame(level)
+      val body =
+        if proc then unNx exp
+        else MOVE (TEMP rv, unEx exp)
+      val body' = procEntryExit1 (frame, body)
+    in
+      procEntryExit {level = lev, body = Nx body'}
+    end
+
+  (* postFunctionDec : unit -> unit *)
+  fun postFunctionDec() = (
+    popSalida();
+    actualLevel := !actualLevel-1)
 
 end

@@ -127,13 +127,19 @@ structure frame :> frame = struct
       STRING (label, value)
     end
 
-  (* TODO *)
-  fun exp (InFrame k) e = MEM (BINOP (PLUS, TEMP fp, CONST k))
-    | exp (InReg l) e = TEMP l
-    | exp todo e = raise Fail "TODO!"
+  (* exp : frame.access -> tree.exp -> tree.exp
+   * recibe el acceso a una variable, la expresión para acceder al fp
+   * donde pertenece la variable y crea expresión para acceder a la variable
+   *)
+  fun exp (InFrame k) e = MEM (BINOP (PLUS, e, CONST k))
+    | exp (InReg t) _ = TEMP t
 
+  (* externalCall : string * tree.exp list -> tree.exp
+   * invoca a una función externa 
+   *)
   fun externalCall (s, l) = CALL (NAME s, l)
 
+  (* TODO *)
   fun procEntryExit1 (frame, body) = body
 
 end

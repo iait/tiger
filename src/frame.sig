@@ -42,7 +42,10 @@ signature frame = sig
   (* crea un fragmento para un string *)
   val newStringFrag : temp.label -> string -> frag
   
+  (* crea la expresión para acceder a una variable *)
   val exp : access -> tree.exp -> tree.exp
+  
+  (* invoca a una función externa *)
   val externalCall : string * tree.exp list -> tree.exp
   
   (* procedure entry exit *)

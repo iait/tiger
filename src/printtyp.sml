@@ -29,7 +29,7 @@ structure printtyp :> printtyp = struct
         else (print " of "; pfl fl (n+1) (u::ul)))
     | ptyp (TTipo _) _ _ = raise Fail ("tipo TTipo no soportado")
   and pfl [] n ul = print ""
-    | pfl ((s, r)::xs) n ul = (print "\n"; indent n; print (s^": "); ptyp (!r) n ul; pfl xs n ul)
+    | pfl ((s, r, _)::xs) n ul = (print "\n"; indent n; print (s^": "); ptyp (!r) n ul; pfl xs n ul)
   
   fun printTyp t = ptyp t 0 []
   

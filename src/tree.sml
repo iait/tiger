@@ -5,21 +5,21 @@ structure tree = struct
                | TEMP of temp.temp
                | BINOP of binop * exp * exp
                | MEM of exp
-               | CALL of exp * exp list
                | ESEQ of stm * exp
 
-  and stm = MOVE of exp * exp
-          | EXP of exp
-          | JUMP of exp * temp.label list
-          | CJUMP of relop * exp * exp * temp.label * temp.label
-          | SEQ of stm * stm
-          | LABEL of temp.label
+       and stm = MOVE of exp * exp
+               | EXP of exp
+               | JUMP of exp * temp.label list
+               | CJUMP of relop * exp * exp * temp.label * temp.label
+               | SEQ of stm * stm
+               | LABEL of temp.label
+               | CALL of exp * exp list
 
-  and binop = PLUS | MINUS | MUL | DIV | AND | OR
-            | LSHIFT | RSHIFT | ARSHIFT | XOR
-
-  and relop = EQ | NE | LT | GT | LE | GE 
-            | ULT | ULE | UGT | UGE
+       and binop = PLUS | MINUS | MUL | DIV | AND | OR
+                 | LSHIFT | RSHIFT | ARSHIFT | XOR
+       
+       and relop = EQ | NE | LT | GT | LE | GE 
+                 | ULT | ULE | UGT | UGE
 
   fun notRel EQ = NE
     | notRel NE = EQ
