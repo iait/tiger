@@ -1,3 +1,4 @@
+(* Abstract Syntax Tree *)
 structure ast = struct
 
   type symbol = string

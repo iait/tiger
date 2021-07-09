@@ -1,4 +1,4 @@
-structure translate :> translate = struct
+structure trans :> trans = struct
 
   open frame
   open tree
@@ -102,17 +102,28 @@ structure translate :> translate = struct
 (************************************************)
 (********** Intermediate representation *********)
 (************************************************)
-  fun Ir(e) =
-    let fun aux(Ex e) = it.tree(EXP e)
-      | aux(Nx s) = it.tree(s)
-      | aux _ = raise Fail "bueno, a completar!"
-      fun aux2(PROC{body, frame}) = aux(Nx body)
-      | aux2(STRING(l, "")) = l^":\n"
-      | aux2(STRING("", s)) = "\t"^s^"\n"
-      | aux2(STRING(l, s)) = l^":\t"^s^"\n"
+  (* Ir : frag list -> string *)
+  fun Ir e =
+    let
+      (* aux : trans.exp -> string *)
+      fun aux (Ex e) = treepp.tree (EXP e)
+        | aux (Nx s) = treepp.tree (s)
+        | aux _ = raise Fail "bueno, a completar!"
+
+      (* aux2 : frag -> string *)
+      fun aux2 (PROC {body, frame}) = aux (Nx body)
+        | aux2 (STRING (l, "")) = l^":\n"
+        | aux2 (STRING ("", s)) = "\t"^s^"\n"
+        | aux2 (STRING (l, s)) = l^":\t"^s^"\n"
+
+      (* aux3 : frag list -> string *)
       fun aux3 [] = ""
-      | aux3(h::t) = (aux2 h)^(aux3 t)
-    in  aux3 e end
+        | aux3 (h::t) = (aux2 h)^(aux3 t)
+
+    in 
+      aux3 e
+    end
+
   fun nombreFrame frame = print(".globl " ^ frame.name frame ^ "\n")
 
 (***********************************************)

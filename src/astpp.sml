@@ -1,4 +1,5 @@
-structure printast :> printast = struct
+(* AST Pretty Print *)
+structure astpp :> astpp = struct
 
   open ast
   open PP

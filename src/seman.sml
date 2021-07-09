@@ -1,13 +1,13 @@
 structure seman :> seman = struct
 
   open ast
-  open typ
-  open entry
-  open translate
+  open tentry
+  open ventry
+  open trans
   open table
   open topsort
   open util
-  open printtyp
+  open typepp
   open error
   open stack
 

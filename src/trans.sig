@@ -1,4 +1,4 @@
-signature translate = sig
+signature trans = sig
 
   exception Break
 
@@ -86,6 +86,7 @@ signature translate = sig
   val functionDec : exp * level * bool -> unit
   val postFunctionDec : unit -> unit
 
+  (* intermediate representation *)
   val Ir : frag list -> string
 
 end

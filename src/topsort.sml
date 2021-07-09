@@ -1,8 +1,9 @@
+(* Topological Sort *)
 structure topsort :> topsort = struct
   
   open ast
   open table
-  open typ
+  open tentry
   open util
   
   exception Ciclo

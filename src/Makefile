@@ -22,9 +22,9 @@ MOVE=mv
 .SUFFIXES:
 .SUFFIXES: .sig .sml .ui .uo
 
-GRALOBJS=ast.uo parser.uo lexer.uo line.uo printast.uo table.uo escape.uo \
-	translate.uo typ.uo entry.uo temp.uo topsort.uo seman.uo printtyp.uo \
-	util.uo error.uo frame.uo tree.uo it.uo stack.uo main.uo
+GRALOBJS=ast.uo parser.uo lexer.uo line.uo astpp.uo table.uo escape.uo \
+	trans.uo tentry.uo ventry.uo temp.uo topsort.uo seman.uo typepp.uo \
+	util.uo error.uo frame.uo tree.uo treepp.uo stack.uo main.uo
 
 all: tiger
 
@@ -55,9 +55,9 @@ clean:
 .sml.uo:
 	$(MOSMLC) $<
 
-depend: ast.sml parser.sml lexer.sml line.sml printast.sml table.sml escape.sml \
-	translate.sml typ.sml entry.sml temp.sml topsort.sml seman.sml printtyp.sml \
-	util.sml error.sml frame.sml tree.sml it.sml stack.sml main.sml test.sml
+depend: ast.sml parser.sml lexer.sml line.sml astpp.sml table.sml escape.sml \
+	trans.sml tentry.sml ventry.sml temp.sml topsort.sml seman.sml typepp.sml \
+	util.sml error.sml frame.sml tree.sml treepp.sml stack.sml main.sml test.sml
 	$(REMOVE) Makefile.bak
 	$(MOVE) Makefile Makefile.bak
 	$(MOSMLTOOLS)/cutdeps < Makefile.bak > Makefile
@@ -65,31 +65,32 @@ depend: ast.sml parser.sml lexer.sml line.sml printast.sml table.sml escape.sml 
 
 ### DO NOT DELETE THIS LINE
 temp.uo: temp.ui 
-printast.ui: ast.uo 
-printtyp.ui: table.ui typ.uo 
 tree.uo: temp.ui 
 util.uo: util.ui ast.uo 
 escape.uo: escape.ui table.ui ast.uo 
-topsort.ui: table.ui ast.uo typ.uo 
+topsort.ui: table.ui tentry.uo ast.uo 
 frame.uo: frame.ui temp.ui tree.uo 
 parser.uo: parser.ui line.uo ast.uo 
-seman.uo: seman.ui table.ui translate.ui entry.uo topsort.ui printtyp.ui \
-    ast.uo error.uo stack.ui util.ui typ.uo 
-printtyp.uo: printtyp.ui table.ui typ.uo 
-it.uo: table.ui tree.uo 
+seman.uo: seman.ui table.ui trans.ui typepp.ui tentry.uo topsort.ui \
+    ventry.uo ast.uo error.uo stack.ui util.ui 
+astpp.uo: astpp.ui ast.uo 
 frame.ui: temp.ui tree.uo 
 lexer.uo: parser.ui line.uo 
-test.uo: parser.ui printast.ui seman.ui lexer.uo line.uo ast.uo error.uo \
+test.uo: parser.ui astpp.ui seman.ui lexer.uo line.uo ast.uo error.uo \
     escape.ui 
-translate.ui: temp.ui frame.ui ast.uo 
-entry.uo: table.ui translate.ui temp.ui ast.uo typ.uo 
+trans.ui: temp.ui frame.ui ast.uo 
 escape.ui: ast.uo 
-printast.uo: printast.ui ast.uo 
-main.uo: parser.ui printast.ui seman.ui lexer.uo line.uo error.uo escape.ui 
+ventry.uo: table.ui trans.ui tentry.uo temp.ui ast.uo 
+astpp.ui: ast.uo 
+main.uo: parser.ui trans.ui astpp.ui seman.ui lexer.uo line.uo error.uo \
+    escape.ui 
+typepp.uo: typepp.ui table.ui tentry.uo 
 seman.ui: ast.uo 
 util.ui: ast.uo 
+treepp.uo: table.ui tree.uo 
 table.uo: table.ui 
-translate.uo: translate.ui it.uo temp.ui frame.ui ast.uo tree.uo stack.ui 
 stack.uo: stack.ui 
 parser.ui: ast.uo 
-topsort.uo: topsort.ui table.ui ast.uo util.ui typ.uo 
+trans.uo: trans.ui temp.ui frame.ui ast.uo treepp.uo tree.uo stack.ui 
+typepp.ui: table.ui tentry.uo 
+topsort.uo: topsort.ui table.ui tentry.uo ast.uo util.ui 

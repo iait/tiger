@@ -1,10 +1,11 @@
-structure entry = struct
+(* Value Entry (variable and function) *)
+structure ventry = struct
 
   open ast
   open table
-  open typ
+  open tentry
   open temp
-  open translate
+  open trans
 
   datatype EnvEntry =
     VIntRO of {access: access, level: int} (* int readonly *)

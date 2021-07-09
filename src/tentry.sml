@@ -1,4 +1,5 @@
-structure typ = struct
+(* Type Entry *)
+structure tentry = struct
 
   type unique = unit ref
 

@@ -1,4 +1,5 @@
-structure it = struct
+(* Tree Pretty Print *)
+structure treepp = struct
 
   open table
   open tree

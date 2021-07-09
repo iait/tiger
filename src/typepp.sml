@@ -1,7 +1,8 @@
-structure printtyp :> printtyp = struct
+(* Type Pretty Print *)
+structure typepp :> typepp = struct
 
   open table
-  open typ
+  open tentry
 
   val uniqueList = ref [] : unit ref list ref
   

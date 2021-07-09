@@ -1,11 +1,12 @@
 open lexer
 open parser
 open line
-open printast
+open astpp
 open escape
 open seman
 open BasicIO Nonstdio
 open error
+open trans
 
 (* lexstream : instream -> lexbuf *)
 fun lexstream (is: instream) =
@@ -35,8 +36,9 @@ fun main args =
     val expr = prog Tok lexbuf handle _ => errParsing lexbuf
     val _ = findEscape expr
     val _ = if arbol then printAst expr else ()
+    val _ = transProg expr
+    val _ = if ir then print (Ir (getResult())) else ()
   in
-    transProg expr;
     print "yes!!\n"
   end	handle Fail s => print("Fail: "^s^"\n")
 
