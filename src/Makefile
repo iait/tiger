@@ -81,7 +81,7 @@ frame.ui: temp.ui tree.uo
 lexer.uo: parser.ui line.uo 
 test.uo: parser.ui printast.ui seman.ui lexer.uo line.uo ast.uo error.uo \
     escape.ui 
-translate.ui: temp.ui frame.ui ast.uo tree.uo 
+translate.ui: temp.ui frame.ui ast.uo 
 entry.uo: table.ui translate.ui temp.ui ast.uo typ.uo 
 escape.ui: ast.uo 
 printast.uo: printast.ui ast.uo 

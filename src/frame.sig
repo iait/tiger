@@ -5,7 +5,6 @@ signature frame = sig
 
   datatype access = InFrame of int (* offset desde el fp *)
                   | InReg of temp.temp
-                  | todo
 
   datatype frag = PROC of {body: tree.stm, frame: frame}
                 | STRING of temp.label * string
@@ -46,7 +45,7 @@ signature frame = sig
   val exp : access -> tree.exp -> tree.exp
   
   (* invoca a una función externa *)
-  val externalCall : string * tree.exp list -> tree.exp
+  val externalCall : string * tree.exp list -> tree.stm
   
   (* procedure entry exit *)
   val procEntryExit1 : frame * tree.stm -> tree.stm

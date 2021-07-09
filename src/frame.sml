@@ -34,7 +34,6 @@ structure frame :> frame = struct
   (* acceso a una variable o parámetro formal de función *)
   datatype access = InFrame of int (* offset desde el fp *)
                   | InReg of temp.temp
-                  | todo
 
   (* fragmento de assembler TODO revisar este comentario
    * puede ser procedimiento con un árbol de código intermedio
@@ -134,7 +133,7 @@ structure frame :> frame = struct
   fun exp (InFrame k) e = MEM (BINOP (PLUS, e, CONST k))
     | exp (InReg t) _ = TEMP t
 
-  (* externalCall : string * tree.exp list -> tree.exp
+  (* externalCall : string * tree.exp list -> tree.stm
    * invoca a una función externa 
    *)
   fun externalCall (s, l) = CALL (NAME s, l)

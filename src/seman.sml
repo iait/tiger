@@ -79,11 +79,12 @@ structure seman :> seman = struct
               val targs = map trexp args
               
               (* busca la función en la tabla *)
-              val (lev,name,formals,result,extern) = case tabBusca (func, venv) of
-                NONE => error ("no existe la función \""^func^"\"", nl)
-                | SOME (Func {level,label,formals,result,extern}) => 
-                    (level,label,formals,result,extern)
-                | _ => error ("se esperaba que \""^func^"\" fuese una función", nl)
+              val (lev,name,formals,result,extern) = 
+                case tabBusca (func, venv) of
+                  NONE => error ("no existe la función \""^func^"\"", nl)
+                  | SOME (Func {level,label,formals,result,extern}) => 
+                      (level,label,formals,result,extern)
+                  | _ => error ("se esperaba que \""^func^"\" fuese una función", nl)
               
               (* verifica número de argumentos *)
               val l = if length targs < length formals then
@@ -103,8 +104,13 @@ structure seman :> seman = struct
               val args = map (fn {exp,ty} => exp) targs
               
               (* crea expresión de la llamada *)
-              val exp = 
-                callExp {name=name, extern=extern, proc=(result=TUnit), lev=lev, args=args}
+              val exp = callExp {
+                name = name,
+                extern = extern,
+                proc = (result=TUnit),
+                lev = lev,
+                args = args
+              }
             in
               {exp=exp, ty=result}
             end
@@ -134,7 +140,7 @@ structure seman :> seman = struct
                   else if tyl=TString then binOpStrExp {left=expl, oper=oper, right=expr}
                   else error ("tipos no comparables por igualdad", nl)
                 else if checkRel oper then
-                  if tyl=TInt then binIntRelExp {left=expl, oper=oper, right=expr}
+                  if tyl=TInt then binOpIntRelExp {left=expl, oper=oper, right=expr}
                   else if tyl=TString then binOpStrExp {left=expl, oper=oper, right=expr}
                   else error ("tipos no comparables", nl)
                 else
@@ -442,7 +448,7 @@ structure seman :> seman = struct
               (* busca un tipo por nombre y si no lo encuetra lanza excepción *)
               fun findTipo nl s = case tabBusca (s, tenv) of
                 SOME t => t
-                | NONE => error ("tipo inexistente \""^typ^"\"", nl)
+                | NONE => error ("tipo inexistente \""^s^"\"", nl)
 
               (* obtiene el tipo de retorno *)
               fun tipoRetorno nl result = Option.getOpt (Option.map (findTipo nl) result, TUnit)
@@ -468,20 +474,22 @@ structure seman :> seman = struct
               val venv' = tabInserList (venv, entries)
 
               (* extrae los levels de las entries *)
-              val levels = List.map 
-                (fn (_, Func {level,...}) => level | _ => raise Fail "solo Func") entries
+              fun extractLevel (_, Func {level,label,formals,result,extern}) = level
+                | extractLevel _ = raise Fail "solo Func"
+              val levels = List.map extractLevel entries
 
               (* traduce un parámetro de función a su EnvEntry de tipo Var *)
               fun paramToVar nl {name,escape,typ} = 
-                (#name(p), Var {
+                (name, Var {
                   ty=findTipo nl typ,
                   access=allocArg (topLevel()) (!escape),
                   level=getActualLev()})
+
               (* traduce una función y verifica el tipo de retorno *)
               fun trbody (({name,params,result,body}, nl), lev) = 
                 let
                   (* pre *)
-                  val _ = preFunctionDec(); pushLevel lev
+                  val _ = (preFunctionDec(); pushLevel lev)
                   (* crear nuevo entorno con las variables de los parámetros *)
                   val venv'' = tabInserList (venv', List.map (paramToVar nl) params)
                   (* traduce la expresión del body de la función *)
@@ -493,11 +501,13 @@ structure seman :> seman = struct
                   (* crea el fragmento de la función *)
                   val _ = functionDec (expbody, lev, tybody=TUnit)
                   (* post *)
-                  val _ = postFunctionDec; popLevel()
+                  val _ = (postFunctionDec(); popLevel())
+                in
+                  ()
                 end
 
               (* traduce todas las funciones del batch *)
-              val res = List.map trbody (ListPair.zip fs levels)
+              val _ = List.app trbody (ListPair.zip (fs, levels))
             in
               (venv', tenv, [])
             end

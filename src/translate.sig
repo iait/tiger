@@ -4,7 +4,6 @@ signature translate = sig
 
   type level
   type access
-  val TODO : access
   type frag = frame.frag
 
   (* level de _tigermain *)
@@ -26,8 +25,7 @@ signature translate = sig
   (* crea un acceso para una variable local *)
   val allocLocal : level -> bool -> access
 
-  type exp 
-  val SCAF : exp
+  type exp
   
   val procEntryExit : {level: level, body: exp} -> unit
   val getResult : unit -> frag list
@@ -46,7 +44,8 @@ signature translate = sig
   val stringExp : string -> exp
   
   (* llamada a función *)
-  val callExp : {name: temp.label, extern: bool, proc: bool, lev: int, args: exp list} -> exp
+  val callExp : 
+    {name: temp.label, extern: bool, proc: bool, lev: level, args: exp list} -> exp
   
   (* operaciones binarias *)
   val binOpIntExp : {left:exp, oper:ast.oper, right:exp} -> exp

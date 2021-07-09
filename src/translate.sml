@@ -14,7 +14,6 @@ structure translate :> translate = struct
   
   (* acceso a la variable *)
   type access = frame.access
-  val TODO : access = todo
   
   type frag = frame.frag
 
@@ -48,8 +47,6 @@ structure translate :> translate = struct
   datatype exp = Ex of tree.exp
                | Nx of tree.stm
                | Cx of label * label -> tree.stm
-               | scaf
-  val SCAF = scaf
 
   (* seq : tree.stm list -> tree.stm *)
   fun seq [] = EXP (CONST 0)
@@ -99,6 +96,9 @@ structure translate :> translate = struct
     | unCx (Ex e) =
         (fn (t,f) => CJUMP(NE, e, CONST 0, t, f))
 
+  (* datos globales: lista de fragmentos *)
+  val datosGlobs = ref ([]: frag list)
+
 (************************************************)
 (********** Intermediate representation *********)
 (************************************************)
@@ -144,7 +144,7 @@ structure translate :> translate = struct
     let
       val r = unEx var
       val rr = newTemp()
-      val checkNil = EXP (externalCall ("_checkNil", [TEMP rr]))
+      val checkNil = externalCall ("_checkNil", [TEMP rr])
       val exp = case field of
         0 => MEM (TEMP rr)
         | n => MEM (BINOP (PLUS, TEMP rr, CONST (n * frame.wSz)))
@@ -168,7 +168,7 @@ structure translate :> translate = struct
         seq[
           MOVE (TEMP ra, a),
           MOVE (TEMP ri, i),
-          EXP (externalCall ("_checkIndex", [TEMP ra, TEMP ri]))],
+          externalCall ("_checkIndex", [TEMP ra, TEMP ri])],
         MEM (BINOP (PLUS, TEMP ra,
           BINOP (MUL, TEMP ri, CONST frame.wSz)))))
     end
@@ -192,9 +192,10 @@ structure translate :> translate = struct
 
 (*************** llamada a función ***************)
 
-  (* val callExp : {name: temp.label, extern: bool, proc: bool, lev: int, args: trans.exp list}
-     -> trans.exp *)
-  fun callExp {name, extern, proc, lev, args} = 
+  (* val callExp : 
+      {name: temp.label, extern: bool, proc: bool, lev: level, args: trans.exp list}
+      -> trans.exp *)
+  fun callExp {name, extern, proc, lev: level, args} = 
     let
       (* función para calcular el static link *)
       fun staticLink callerLev calleeLev =
@@ -228,10 +229,10 @@ structure translate :> translate = struct
       (* agrega el static link si la función NO es externa *)
       val argExps' = 
         if extern then argExps
-        else (staticLink (getActualLev()) lev)::argExps
+        else (staticLink (getActualLev()) (#level(lev)))::argExps
 
       (* crea un temporal para el retorno si la función devuelve algo *)
-      val returnTemp = if proc then NONE else SOME newTemp()
+      val returnTemp = if proc then NONE else SOME (newTemp())
     in
       if proc then 
         Nx (seq (argStms @ [CALL (NAME name, argExps')]))
@@ -253,7 +254,7 @@ structure translate :> translate = struct
         | MinusOp => MINUS
         | TimesOp => MUL
         | DivideOp => DIV
-        | _ => raise "Invocación binOpIntExp con operador inválido"
+        | _ => raise Fail "Invocación binOpIntExp con operador inválido"
     in
       Ex (BINOP (binop, unEx left, unEx right))
     end
@@ -268,7 +269,7 @@ structure translate :> translate = struct
         | LeOp => LE
         | GtOp => GT
         | GeOp => GE
-        | _ => raise "Invocación binOpIntRelExp con operador inválido"
+        | _ => raise Fail "Invocación binOpIntRelExp con operador inválido"
     in
       Cx (fn (t, f) => CJUMP (relop, unEx left, unEx right, t, f))
     end
@@ -283,22 +284,22 @@ structure translate :> translate = struct
         | LeOp => LE
         | GtOp => GT
         | GeOp => GE
-        | _ => raise "Invocación binOpStrExp con operador inválido"
+        | _ => raise Fail "Invocación binOpStrExp con operador inválido"
       val stringCompareCall = externalCall ("_stringCompare", [unEx left, unEx right])
     in
-      Cx (fn (t, f) => CJUMP (relop, stringCompareCall, CONST 0, t, f))
+      Cx (fn (t, f) => CJUMP (relop, ESEQ (stringCompareCall, TEMP frame.rv), CONST 0, t, f))
     end
 
     (* nilCompare : {record:trans.exp, oper:ast.oper} -> trans.exp *)
-    fun nilCompare record =
+    fun nilCompare {record, oper} =
       let
         val relop = case oper of
           EqOp => EQ
           | NeqOp => NE
-          | _ => raise "Invocación nilCompare con operador inválido"
+          | _ => raise Fail "Invocación nilCompare con operador inválido"
         val nilCompare = externalCall ("_nilCompare", [unEx record])
       in
-        Cx (fn (t, f) => CJUMP (relop, nilCompare, CONST 0, t, f))
+        Cx (fn (t, f) => CJUMP (relop, ESEQ (nilCompare, TEMP frame.rv), CONST 0, t, f))
       end
 
 (*************** inicialización de record y array ***************)
@@ -306,16 +307,16 @@ structure translate :> translate = struct
   (* recordExp : (trans.exp * int) list -> trans.exp *)
   fun recordExp l =
     let
-      val recordAddr = newTemp()
+      val recAddr = newTemp()
       fun initRecord [] = []
         | initRecord ((e, i)::tl) = 
-            MOVE (BINOP (PLUS, TEMP recordAddr, i * frame.wSz), unEx e)
+            (MOVE (BINOP (PLUS, TEMP recAddr, CONST (i*frame.wSz)), unEx e))::(initRecord tl)
       val initStms = initRecord l
       val allocRecord = externalCall ("_allocRecord", [CONST (List.length l)])
     in
       Ex (ESEQ (
-        seq ((MOVE (TEMP recordAddr, allocRecord))::initStms),
-        TEMP recordAddr))
+        seq (allocRecord::(MOVE (TEMP recAddr, TEMP frame.rv))::initStms),
+        TEMP recAddr))
     end
 
   (* arrayExp : {size: trans.exp, init: trans.exp} -> trans.exp *)
@@ -323,8 +324,13 @@ structure translate :> translate = struct
     let
       val sizeExp = unEx size
       val initExp = unEx init
+      val arrayAddr = newTemp()
     in
-      Ex (externalCall ("_allocArray", [sizeExp, initExp]))
+      Ex (ESEQ (
+        seq [
+          externalCall ("_allocArray", [sizeExp, initExp]),
+          MOVE (TEMP arrayAddr, TEMP frame.rv)],
+        TEMP arrayAddr))
     end
 
 (*************** condicionales if ***************)
@@ -393,14 +399,14 @@ structure translate :> translate = struct
   local
     val salidas: label option Pila = nuevaPila1 NONE
   in
-    fun pushSalida l = pushPila salidas (SOME l)
+    val pushSalida = pushPila salidas
     fun popSalida() = popPila salidas
     fun topSalida() = case topPila salidas of
           SOME l => l
           | NONE => raise Break
   end
 
-  fun preLoopExp() = pushSalida (newLabel())
+  fun preLoopExp() = pushSalida (SOME (newLabel()))
   
   fun breakExp() = 
     let
@@ -422,21 +428,21 @@ structure translate :> translate = struct
     in
       Nx (seq[
         LABEL testLabel,
-        cf (bodyLabel, doneLabel),
+        condFunc (bodyLabel, doneLabel),
         LABEL bodyLabel,
         bodyExp,
         JUMP (NAME testLabel, [testLabel]),
         LABEL doneLabel])
     end
   
-  (* forExp : {lo: trans.exp, hi: trans.exp, body: trans.exp} -> trans.exp *)
-  fun forExp {lo, hi, body} =
+  (* forExp : {lo: trans.exp, hi: trans.exp, var: trans.exp, body: trans.exp} -> trans.exp *)
+  fun forExp {lo, hi, var, body} =
     let
       val loTemp = newTemp()
       val hiTemp = newTemp()
-      val varTemp = newTemp()
       val loExp = unEx lo
       val hiExp = unEx hi
+      val varExp = unEx var
       val bodyExp = unNx body
       val testLabel = newLabel()
       val bodyLabel = newLabel()
@@ -445,13 +451,13 @@ structure translate :> translate = struct
       Nx (seq [
         MOVE (TEMP loTemp, loExp),
         MOVE (TEMP hiTemp, hiExp),
-        EXP (externalCall ("_checkFor", [TEMP loTemp, TEMP hiTemp])),
-        MOVE (TEMP varTemp, loExp),
+        externalCall ("_checkFor", [TEMP loTemp, TEMP hiTemp]),
+        MOVE (varExp, loExp),
         LABEL testLabel,
-        CJUMP (LE, TEMP varTemp, TEMP hiTemp, bodyLabel, doneLabel),
+        CJUMP (LE, varExp, TEMP hiTemp, bodyLabel, doneLabel),
         LABEL bodyLabel,
         bodyExp,
-        MOVE (TEMP varTemp, BINOP (PLUS, TEMP varTemp, CONST 1)),
+        MOVE (varExp, BINOP (PLUS, varExp, CONST 1)),
         JUMP (NAME testLabel, [testLabel]),
         LABEL doneLabel])
     end
@@ -498,9 +504,6 @@ structure translate :> translate = struct
 
 (*************** declaración de función ***************)
 
-  (* datos globales: lista de fragmentos *)
-  val datosGlobs = ref ([]: frag list)
-
   (* procEntryExit : {level: trans.level, body: trans.exp} -> unit *)
   fun procEntryExit {level: level, body: exp} =
     let
@@ -522,7 +525,7 @@ structure translate :> translate = struct
   (* functionDec : trans.exp * trans.level * bool -> unit *)
   fun functionDec (exp, lev, proc) =
     let
-      val frame = #frame(level)
+      val frame = #frame(lev)
       val body =
         if proc then unNx exp
         else MOVE (TEMP rv, unEx exp)
