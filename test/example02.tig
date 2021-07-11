@@ -1,0 +1,7 @@
+
+type intarray = array of int
+var a := intarray[10] of 5
+a[0] := 1
+a[9] := 10
+
+

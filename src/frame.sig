@@ -45,7 +45,7 @@ signature frame = sig
   val exp : access -> tree.exp -> tree.exp
   
   (* invoca a una función externa *)
-  val externalCall : string * tree.exp list -> tree.stm
+  val externalCall : string * tree.exp list -> tree.exp
   
   (* procedure entry exit *)
   val procEntryExit1 : frame * tree.stm -> tree.stm

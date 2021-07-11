@@ -133,7 +133,7 @@ structure frame :> frame = struct
   fun exp (InFrame k) e = MEM (BINOP (PLUS, e, CONST k))
     | exp (InReg t) _ = TEMP t
 
-  (* externalCall : string * tree.exp list -> tree.stm
+  (* externalCall : string * tree.exp list -> tree.exp
    * invoca a una función externa 
    *)
   fun externalCall (s, l) = CALL (NAME s, l)

@@ -27,9 +27,6 @@ structure treepp = struct
             indent(d)^sayln("MOVE(")^exp(a,d+1)^
             sayln(",")^exp(b,d+1)^say(")")
         | stm (EXP e, d) = indent(d)^sayln("EXP(")^exp(e,d+1)^say(")")
-        | stm (CALL (e,el),d) = 
-            indent(d)^sayln("CALL(")^(exp(e,d+1))^
-            concat(map (fn a => sayln(",")^exp(a,d+2)) el)^say(")")
 
       and exp (BINOP (p,a,b),d) = 
             indent(d)^say("BINOP(")^binop(p)^sayln(",")^
@@ -41,6 +38,9 @@ structure treepp = struct
             exp(e,d+1)^say(")")
         | exp (NAME lab, d) = indent(d)^say("NAME ")^say(lab)
         | exp (CONST i, d) = indent(d)^say("CONST ")^say(Int.toString i)
+        | exp (CALL (e,el),d) = 
+            indent(d)^sayln("CALL(")^(exp(e,d+1))^
+            concat(map (fn a => sayln(",")^exp(a,d+2)) el)^say(")")
 
       and binop PLUS = say "PLUS"
         | binop MINUS = say "MINUS"

@@ -77,13 +77,9 @@ structure trans :> trans = struct
     | unNx (Nx s) = s
     | unNx (Cx cf) =
         let
-          val t = newLabel()
-          val f = newLabel()
+          val l = newLabel()
         in
-          seq [
-            cf (t,f),
-            LABEL t,
-            LABEL f]
+          seq [cf (l,l), LABEL l]
         end
 
   (* unCx : trans.exp -> (label * label -> tree.stm) *)
@@ -163,7 +159,7 @@ structure trans :> trans = struct
       Ex (ESEQ (
         seq[
           MOVE (TEMP rr, r),
-          checkNil],
+          EXP checkNil],
         exp))
     end
   
@@ -174,12 +170,13 @@ structure trans :> trans = struct
       val i = unEx ind
       val ra = newTemp()
       val ri = newTemp()
+      val checkIndex = externalCall ("_checkIndex", [TEMP ra, TEMP ri])
     in
       Ex (ESEQ (
         seq[
           MOVE (TEMP ra, a),
           MOVE (TEMP ri, i),
-          externalCall ("_checkIndex", [TEMP ra, TEMP ri])],
+          EXP checkIndex],
         MEM (BINOP (PLUS, TEMP ra,
           BINOP (MUL, TEMP ri, CONST frame.wSz)))))
     end
@@ -246,12 +243,12 @@ structure trans :> trans = struct
       val returnTemp = if proc then NONE else SOME (newTemp())
     in
       if proc then 
-        Nx (seq (argStms @ [CALL (NAME name, argExps')]))
+        Nx (seq (argStms @ [
+          EXP (CALL (NAME name, argExps'))]))
       else 
         Ex (ESEQ (
           seq (argStms @ [
-            CALL (NAME name, argExps'),
-            MOVE (TEMP (valOf returnTemp), TEMP frame.rv)]), 
+            MOVE (TEMP (valOf returnTemp), CALL (NAME name, argExps'))]), 
           TEMP (valOf returnTemp)))
     end
 
@@ -298,7 +295,7 @@ structure trans :> trans = struct
         | _ => raise Fail "Invocación binOpStrExp con operador inválido"
       val stringCompareCall = externalCall ("_stringCompare", [unEx left, unEx right])
     in
-      Cx (fn (t, f) => CJUMP (relop, ESEQ (stringCompareCall, TEMP frame.rv), CONST 0, t, f))
+      Cx (fn (t, f) => CJUMP (relop, stringCompareCall, CONST 0, t, f))
     end
 
     (* nilCompare : {record:trans.exp, oper:ast.oper} -> trans.exp *)
@@ -310,7 +307,7 @@ structure trans :> trans = struct
           | _ => raise Fail "Invocación nilCompare con operador inválido"
         val nilCompare = externalCall ("_nilCompare", [unEx record])
       in
-        Cx (fn (t, f) => CJUMP (relop, ESEQ (nilCompare, TEMP frame.rv), CONST 0, t, f))
+        Cx (fn (t, f) => CJUMP (relop, nilCompare, CONST 0, t, f))
       end
 
 (*************** inicialización de record y array ***************)
@@ -326,7 +323,7 @@ structure trans :> trans = struct
       val allocRecord = externalCall ("_allocRecord", [CONST (List.length l)])
     in
       Ex (ESEQ (
-        seq (allocRecord::(MOVE (TEMP recAddr, TEMP frame.rv))::initStms),
+        seq (MOVE (TEMP recAddr, allocRecord)::initStms),
         TEMP recAddr))
     end
 
@@ -336,11 +333,10 @@ structure trans :> trans = struct
       val sizeExp = unEx size
       val initExp = unEx init
       val arrayAddr = newTemp()
+      val allocArray = externalCall ("_allocArray", [sizeExp, initExp])
     in
       Ex (ESEQ (
-        seq [
-          externalCall ("_allocArray", [sizeExp, initExp]),
-          MOVE (TEMP arrayAddr, TEMP frame.rv)],
+        MOVE (TEMP arrayAddr, allocArray),
         TEMP arrayAddr))
     end
 
@@ -449,27 +445,25 @@ structure trans :> trans = struct
   (* forExp : {lo: trans.exp, hi: trans.exp, var: trans.exp, body: trans.exp} -> trans.exp *)
   fun forExp {lo, hi, var, body} =
     let
-      val loTemp = newTemp()
       val hiTemp = newTemp()
       val loExp = unEx lo
       val hiExp = unEx hi
       val varExp = unEx var
       val bodyExp = unNx body
-      val testLabel = newLabel()
+      val incLabel = newLabel()
       val bodyLabel = newLabel()
       val doneLabel = topSalida()
     in
       Nx (seq [
-        MOVE (TEMP loTemp, loExp),
         MOVE (TEMP hiTemp, hiExp),
-        externalCall ("_checkFor", [TEMP loTemp, TEMP hiTemp]),
         MOVE (varExp, loExp),
-        LABEL testLabel,
         CJUMP (LE, varExp, TEMP hiTemp, bodyLabel, doneLabel),
         LABEL bodyLabel,
         bodyExp,
+        CJUMP (LT, varExp, TEMP hiTemp, incLabel, doneLabel),
+        LABEL incLabel,
         MOVE (varExp, BINOP (PLUS, varExp, CONST 1)),
-        JUMP (NAME testLabel, [testLabel]),
+        JUMP (NAME bodyLabel, [bodyLabel]),
         LABEL doneLabel])
     end
 
