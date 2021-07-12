@@ -171,14 +171,16 @@ structure trans :> trans = struct
       val ra = newTemp()
       val ri = newTemp()
       val checkIndex = externalCall ("_checkIndex", [TEMP ra, TEMP ri])
+      val i' = case i of
+          CONST k => CONST (k*frame.wSz)
+          | _ => BINOP (LSHIFT, TEMP ri, CONST frame.log2wSz)
     in
       Ex (ESEQ (
         seq[
           MOVE (TEMP ra, a),
           MOVE (TEMP ri, i),
           EXP checkIndex],
-        MEM (BINOP (PLUS, TEMP ra,
-          BINOP (MUL, TEMP ri, CONST frame.wSz)))))
+        MEM (BINOP (PLUS, TEMP ra, i'))))
     end
 
 (*************** constantes ***************)
@@ -293,9 +295,9 @@ structure trans :> trans = struct
         | GtOp => GT
         | GeOp => GE
         | _ => raise Fail "Invocación binOpStrExp con operador inválido"
-      val stringCompareCall = externalCall ("_stringCompare", [unEx left, unEx right])
+      val stringCompare = externalCall ("_stringCompare", [unEx left, unEx right])
     in
-      Cx (fn (t, f) => CJUMP (relop, stringCompareCall, CONST 0, t, f))
+      Cx (fn (t, f) => CJUMP (relop, stringCompare, CONST 0, t, f))
     end
 
     (* nilCompare : {record:trans.exp, oper:ast.oper} -> trans.exp *)
@@ -307,7 +309,7 @@ structure trans :> trans = struct
           | _ => raise Fail "Invocación nilCompare con operador inválido"
         val nilCompare = externalCall ("_nilCompare", [unEx record])
       in
-        Cx (fn (t, f) => CJUMP (relop, nilCompare, CONST 0, t, f))
+        Cx (fn (t, f) => CJUMP (relop, nilCompare, CONST 1, t, f))
       end
 
 (*************** inicialización de record y array ***************)

@@ -47,6 +47,7 @@ structure frame :> frame = struct
   val sp = "rsp"               (* stack pointer *)
   
   val wSz = 8                  (* tamaño de la palabra *)
+  val log2wSz = 3              (* log base 2 de word size *)
 
   val fpPrev = 0               (* ubicación del fp anterior *)
   val fpPrevLev = 2*wSz        (* ubicación del static link *)

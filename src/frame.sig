@@ -15,6 +15,7 @@ signature frame = sig
   val sp : temp.temp (* stack pointer *)
 
   val wSz : int                  (* tamaño de la palabra *)
+  val log2wSz : int              (* log base 2 de word size *)
 
   (* offsets en bytes a partir del fp *)
   val fpPrev : int               (* ubicación del fp anterior *)
