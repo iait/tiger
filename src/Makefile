@@ -24,7 +24,8 @@ MOVE=mv
 
 GRALOBJS=ast.uo parser.uo lexer.uo line.uo astpp.uo table.uo escape.uo \
 	trans.uo tentry.uo ventry.uo temp.uo topsort.uo seman.uo typepp.uo \
-	util.uo error.uo frame.uo tree.uo treepp.uo stack.uo main.uo
+	util.uo error.uo frame.uo tree.uo treepp.uo stack.uo canon.uo \
+	interp.uo main.uo
 
 all: tiger
 
@@ -57,7 +58,8 @@ clean:
 
 depend: ast.sml parser.sml lexer.sml line.sml astpp.sml table.sml escape.sml \
 	trans.sml tentry.sml ventry.sml temp.sml topsort.sml seman.sml typepp.sml \
-	util.sml error.sml frame.sml tree.sml treepp.sml stack.sml main.sml test.sml
+	util.sml error.sml frame.sml tree.sml treepp.sml stack.sml canon.sml \
+	interp.sml main.sml test.sml
 	$(REMOVE) Makefile.bak
 	$(MOVE) Makefile Makefile.bak
 	$(MOSMLTOOLS)/cutdeps < Makefile.bak > Makefile
@@ -65,6 +67,7 @@ depend: ast.sml parser.sml lexer.sml line.sml astpp.sml table.sml escape.sml \
 
 ### DO NOT DELETE THIS LINE
 temp.uo: temp.ui 
+interp.uo: interp.ui table.ui temp.ui frame.ui treepp.uo tree.uo 
 tree.uo: temp.ui 
 util.uo: util.ui ast.uo 
 escape.uo: escape.ui table.ui ast.uo 
@@ -74,8 +77,10 @@ parser.uo: parser.ui line.uo ast.uo
 seman.uo: seman.ui table.ui trans.ui typepp.ui tentry.uo topsort.ui \
     ventry.uo ast.uo error.uo stack.ui util.ui 
 astpp.uo: astpp.ui ast.uo 
+canon.ui: temp.ui tree.uo 
 frame.ui: temp.ui tree.uo 
 lexer.uo: parser.ui line.uo 
+canon.uo: canon.ui table.ui temp.ui tree.uo 
 test.uo: parser.ui astpp.ui seman.ui lexer.uo line.uo ast.uo error.uo \
     escape.ui 
 trans.ui: temp.ui frame.ui ast.uo 
@@ -93,4 +98,5 @@ stack.uo: stack.ui
 parser.ui: ast.uo 
 trans.uo: trans.ui temp.ui frame.ui ast.uo treepp.uo tree.uo stack.ui 
 typepp.ui: table.ui tentry.uo 
+interp.ui: temp.ui frame.ui tree.uo 
 topsort.uo: topsort.ui table.ui tentry.uo ast.uo util.ui 
