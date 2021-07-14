@@ -39,7 +39,7 @@ structure frame :> frame = struct
    * puede ser procedimiento con un árbol de código intermedio
    * o un string con etiqueta.
    *)
-  datatype frag = PROC of {body: tree.stm, frame: frame} 
+  datatype frag = PROC of {body: tree.stm list, frame: frame} 
                 | STRING of temp.label * string
 
   val rv = "rax"               (* return value  *)

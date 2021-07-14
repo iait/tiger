@@ -5,6 +5,7 @@ structure trans :> trans = struct
   open temp
   open ast
   open stack
+  open canon
 
   exception Break
   exception DivByZero
@@ -98,29 +99,43 @@ structure trans :> trans = struct
 (************************************************)
 (********** Intermediate representation *********)
 (************************************************)
-  (* Ir : frag list -> string *)
-  fun Ir e =
+
+  (* getResult : unit -> frag list *)
+  fun getResult() = !datosGlobs
+
+  (* printIr : frag list -> unit *)
+  fun printIr fragList =
     let
-      (* aux : trans.exp -> string *)
-      fun aux (Ex e) = treepp.tree (EXP e)
-        | aux (Nx s) = treepp.tree (s)
-        | aux _ = raise Fail "bueno, a completar!"
+      (* printStms : tree.stm list -> unit *)
+      val printStms = (List.app print) o (List.map treepp.tree)
+      
+      (* nombreFrame : frame -> unit *)
+      fun nombreFrame frame = print(".globl " ^ frame.name frame ^ "\n")
 
-      (* aux2 : frag -> string *)
-      fun aux2 (PROC {body, frame}) = aux (Nx body)
-        | aux2 (STRING (l, "")) = l^":\n"
-        | aux2 (STRING ("", s)) = "\t"^s^"\n"
-        | aux2 (STRING (l, s)) = l^":\t"^s^"\n"
+      (* printFrag : frag -> unit *)
+      fun printFrag (PROC {body, frame}) = 
+            (nombreFrame frame; printStms body)
+        | printFrag (STRING (l, "")) = print (l^":\n")
+        | printFrag (STRING ("", s)) = print ("\t"^s^"\n")
+        | printFrag (STRING (l, s)) = print (l^":\t"^s^"\n")
 
-      (* aux3 : frag list -> string *)
-      fun aux3 [] = ""
-        | aux3 (h::t) = (aux2 h)^(aux3 t)
+      (* aux : frag list -> unit *)
+      fun aux [] = ()
+        | aux (h::t) = (printFrag h; aux t)
 
     in 
-      aux3 e
+      aux fragList
     end
 
-  fun nombreFrame frame = print(".globl " ^ frame.name frame ^ "\n")
+  (* canonize : frag list -> frag list *)
+  fun canonize fragList =
+    let
+      fun aux (PROC {body=[stm], frame}) = PROC {body=canon stm, frame=frame}
+        | aux (STRING s) = STRING s
+        | aux _ = raise Fail "ya canonizado?"
+    in
+      List.map aux fragList
+    end
 
 (***********************************************)
 (********** Traducción de expresiones **********)
@@ -516,13 +531,11 @@ structure trans :> trans = struct
     let
       val frame = #frame(level)
       val label = STRING (name frame, "")
-      val proc = PROC {frame = frame, body = unNx body}
+      val proc = PROC {body = [unNx body], frame = frame}
       val final = STRING ("#############", "")
     in  
       datosGlobs := (!datosGlobs @ [label, proc, final])
     end
-
-  fun getResult() = !datosGlobs
 
   (* preFunctionDec : unit -> unit *)
   fun preFunctionDec() = (

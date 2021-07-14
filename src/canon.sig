@@ -29,6 +29,9 @@ signature canon = sig
      as possible are eliminated by falling through into T.LABEL(lab).
   *)
   val traceSchedule : tree.stm list list * temp.label -> tree.stm list
+  
+  (* All together *)
+  val canon : tree.stm -> tree.stm list
 
 end
 

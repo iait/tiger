@@ -88,7 +88,7 @@ escape.ui: ast.uo
 ventry.uo: table.ui trans.ui tentry.uo temp.ui ast.uo 
 astpp.ui: ast.uo 
 main.uo: parser.ui trans.ui astpp.ui seman.ui lexer.uo line.uo error.uo \
-    escape.ui 
+    ast.uo escape.ui 
 typepp.uo: typepp.ui table.ui tentry.uo 
 seman.ui: ast.uo 
 util.ui: ast.uo 
@@ -96,7 +96,8 @@ treepp.uo: table.ui tree.uo
 table.uo: table.ui 
 stack.uo: stack.ui 
 parser.ui: ast.uo 
-trans.uo: trans.ui temp.ui frame.ui ast.uo treepp.uo tree.uo stack.ui 
+trans.uo: trans.ui temp.ui frame.ui ast.uo canon.ui treepp.uo tree.uo \
+    stack.ui 
 typepp.ui: table.ui tentry.uo 
 interp.ui: temp.ui frame.ui tree.uo 
 topsort.uo: topsort.ui table.ui tentry.uo ast.uo util.ui 

@@ -28,7 +28,6 @@ signature trans = sig
   type exp
   
   val procEntryExit : {level: level, body: exp} -> unit
-  val getResult : unit -> frag list
   
   (***** Traducción de expresiones *****)
   
@@ -87,6 +86,10 @@ signature trans = sig
   val postFunctionDec : unit -> unit
 
   (* intermediate representation *)
-  val Ir : frag list -> string
+  val getResult : unit -> frag list
+  val printIr : frag list -> unit
+
+  (* canonización *)
+  val canonize : frag list -> frag list
 
 end

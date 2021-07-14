@@ -6,7 +6,7 @@ signature frame = sig
   datatype access = InFrame of int (* offset desde el fp *)
                   | InReg of temp.temp
 
-  datatype frag = PROC of {body: tree.stm, frame: frame}
+  datatype frag = PROC of {body: tree.stm list, frame: frame}
                 | STRING of temp.label * string
 
   (* Registros especiales *)
@@ -30,7 +30,7 @@ signature frame = sig
   (* crea un nuevo frame *)
   val newFrame : {name: temp.label, formals: bool list} -> frame
   (* obtiene el nombre del frame *)
-  val name : frame -> temp.label
+  val name : frame -> string
 
   (* crea una lista de accesos para los argumentos de una función *)
   val formals : frame -> access list

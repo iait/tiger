@@ -173,4 +173,7 @@ structure canon :> canon = struct
       getnext(foldr enterblock (tabNueva()) blocks, blocks) @ [LABEL done]
     end
 
+(*********************** canon : tree.stm -> tree.stm ***************************)
+  val canon = traceSchedule o basicBlocks o linearize
+
 end
