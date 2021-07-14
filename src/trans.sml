@@ -137,6 +137,16 @@ structure trans :> trans = struct
       List.map aux fragList
     end
 
+  (* splitFrags : frag list -> (stm list * frame) list * (label * string) list *)
+  fun splitFrags fragList =
+    let
+      fun aux [] (ps, ss) = (ps, ss)
+        | aux (PROC {body, frame}::tl) (ps, ss) = aux tl ((body, frame)::ps, ss)
+        | aux (STRING (label, str)::tl) (ps, ss) = aux tl (ps, (label, str)::ss)
+    in
+      aux fragList ([], [])
+    end
+
 (***********************************************)
 (********** Traducción de expresiones **********)
 (***********************************************)

@@ -91,5 +91,9 @@ signature trans = sig
 
   (* canonización *)
   val canonize : frag list -> frag list
+  
+  (* separa lista de fragmentos en procedimientos y strings *)
+  val splitFrags : 
+    frag list -> (tree.stm list * frame.frame) list * (temp.label * string) list
 
 end

@@ -112,7 +112,7 @@ structure interp :> interp = struct
   *)
 
   (* inter : bool -> (stm list * frame) list -> (label * string) list -> unit *)
-  fun inter showDebug (funFracs: (stm list * frame) list) (stringFracs: (label * string) list) =
+  fun interp showDebug (funFracs: (stm list * frame) list) (stringFracs: (label * string) list) =
   let
 
     val _ = List.map (fn (lab, str) => storeLabel lab (storeString str)) stringFracs

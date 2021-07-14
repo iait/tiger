@@ -7,6 +7,7 @@ open seman
 open BasicIO Nonstdio
 open error
 open trans
+open interp
 
 (* lexstream : instream -> lexbuf *)
 fun lexstream (is: instream) =
@@ -58,7 +59,10 @@ fun main args =
     val _ = if canon then printIr canonList else ()
     (* TODO code *)
     (* TODO flow *)
-    (* TODO inter *)
+    (* separa lista de fragmentos en procedimientos y strings *)
+    val (ps, ss) = splitFrags canonList
+    (* interpreta código intermedio canonizado *)
+    val _ = if inter then interp true ps ss else ()
   in
     print "----Fin de la compilación\n"
   end	handle Fail s => print("Fail: "^s^"\n")

@@ -83,12 +83,12 @@ lexer.uo: parser.ui line.uo
 canon.uo: canon.ui table.ui temp.ui tree.uo 
 test.uo: parser.ui astpp.ui seman.ui lexer.uo line.uo ast.uo error.uo \
     escape.ui 
-trans.ui: temp.ui frame.ui ast.uo 
+trans.ui: temp.ui frame.ui ast.uo tree.uo 
 escape.ui: ast.uo 
 ventry.uo: table.ui trans.ui tentry.uo temp.ui ast.uo 
 astpp.ui: ast.uo 
-main.uo: parser.ui trans.ui astpp.ui seman.ui lexer.uo line.uo error.uo \
-    ast.uo escape.ui 
+main.uo: parser.ui trans.ui interp.ui astpp.ui seman.ui lexer.uo line.uo \
+    error.uo ast.uo escape.ui 
 typepp.uo: typepp.ui table.ui tentry.uo 
 seman.ui: ast.uo 
 util.ui: ast.uo 
