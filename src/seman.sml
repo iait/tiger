@@ -130,11 +130,12 @@ structure seman :> seman = struct
                 | GtOp => true
                 | GeOp => true
                 | _ => false
-              val exp = 
-                if not (tiposIguales tyl tyr) then error ("tipos distintos", nl)
+              val exp =
+                if checkEq oper andalso tyl=TNil andalso tyr=TNil 
+                  then error ("comparación nils", nl) 
+                else if not (tiposIguales tyl tyr) then error ("tipos distintos", nl)
                 else if checkEq oper then
-                  if tyl=TNil andalso tyr=TNil then error ("comparación nils", nl)
-                  else if tyl=TNil then nilCompare {record=expr, oper=oper}
+                  if tyl=TNil then nilCompare {record=expr, oper=oper}
                   else if tyr=TNil then nilCompare {record=expl, oper=oper}
                   else if tyl=TInt then binOpIntRelExp {left=expl, oper=oper, right=expr}
                   else if tyl=TString then binOpStrExp {left=expl, oper=oper, right=expr}
@@ -276,7 +277,6 @@ structure seman :> seman = struct
               val {exp=exptest, ty=tytest} = trexp test
               val _ = preLoopExp()
               val {exp=expbody, ty=tybody} = trexp body
-              val _ = postLoopExp()
               val exp = 
                 if tytest<>TInt then
                   error ("error de tipo en la condición", nl)
@@ -284,6 +284,7 @@ structure seman :> seman = struct
                   error ("el cuerpo del while no puede devolver valor", nl)
                 else
                   whileExp {test=exptest, body=expbody}
+              val _ = postLoopExp()
             in
               {exp=exp, ty=TUnit}
             end
@@ -300,7 +301,6 @@ structure seman :> seman = struct
               val {exp=exphi, ty=tyhi} = trexp hi
               val _ = preLoopExp()
               val {exp=expbody, ty=tybody} = transExp (venv', tenv) body
-              val _ = postLoopExp()
               val exp =
                 if tylo<>TInt then
                   error ("error en el tipo de lo", nl)
@@ -310,6 +310,7 @@ structure seman :> seman = struct
                   error ("el cuerpo del for no puede devolver valor", nl)
                 else
                   forExp {lo=explo, hi=exphi, var=expvar, body=expbody}
+              val _ = postLoopExp()
             in
                 {exp=exp, ty=TUnit}
             end
@@ -404,16 +405,16 @@ structure seman :> seman = struct
       fun trdec (VarDec ({name, escape, typ, init}, nl)) =
             let
               val {exp=expinit, ty=tyinit} = transExp (venv, tenv) init
-              val _ = case typ of
-                NONE => if tyinit<>TUnit andalso tyinit<>TNil then ()
+              val ty = case typ of
+                NONE => if tyinit<>TUnit andalso tyinit<>TNil then tyinit
                         else error ("inicialización incorrecta de variable \""^name^"\"", nl)
                 | SOME s => (case tabBusca (s, tenv) of
                     NONE => error ("tipo inexistente \""^s^"\"", nl)
-                    | SOME tyvar => if tiposIguales tyvar tyinit then () 
+                    | SOME tyvar => if tiposIguales tyvar tyinit then tyvar 
                                     else error ("tipo \""^s^"\" no compatible con init", nl))
               val acc = allocLocal (topLevel()) (!escape)
               val entry = Var {
-                ty = tyinit,
+                ty = ty,
                 access = acc,
                 level = getActualLev()
               }

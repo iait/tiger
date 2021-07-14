@@ -146,7 +146,7 @@ val _ = printResult result
  *)
 val _ = print "Test13\n";
 val result = expect (compile "test/test13.tig") 
-  (SOME "error de tipos")
+  (SOME "tipos distintos")
 val _ = printResult result
 
 (* test14
@@ -154,7 +154,7 @@ val _ = printResult result
  *)
 val _ = print "Test14\n";
 val result = expect (compile "test/test14.tig") 
-  (SOME "tipos no comparables por desigualdad")
+  (SOME "tipos distintos")
 val _ = printResult result
 
 (* test15
@@ -252,7 +252,7 @@ val _ = printResult result
  *)
 val _ = print "Test26\n";
 val result = expect (compile "test/test26.tig") 
-  (SOME "error de tipos")
+  (SOME "tipos distintos")
 val _ = printResult result
 
 (* test27
@@ -269,7 +269,7 @@ val _ = printResult result
  *)
 val _ = print "Test28\n";
 val result = expect (compile "test/test28.tig") 
-  (SOME "tipo \"rectype1\" no compatible con inicialización")
+  (SOME "tipo \"rectype1\" no compatible con init")
 val _ = printResult result
 
 (* test29
@@ -279,7 +279,7 @@ val _ = printResult result
  *)
 val _ = print "Test29\n";
 val result = expect (compile "test/test29.tig") 
-  (SOME "tipo \"arrtype1\" no compatible con inicialización")
+  (SOME "tipo \"arrtype1\" no compatible con init")
 val _ = printResult result
 
 (* test30
@@ -294,7 +294,7 @@ val _ = printResult result
  *)
 val _ = print "Test31\n";
 val result = expect (compile "test/test31.tig") 
-  (SOME "tipo \"int\" no compatible con inicialización")
+  (SOME "tipo \"int\" no compatible con init")
 val _ = printResult result
 
 (* test32
@@ -357,7 +357,7 @@ val _ = printResult result
  *)
 val _ = print "Test39\n";
 val result = expect (compile "test/test39.tig")
-  (SOME "declaración de tipo \"g\" duplicada")
+  (SOME "declaración de función \"g\" duplicada")
 val _ = printResult result
 
 (* test40
@@ -447,7 +447,8 @@ val _ = printResult result
  * Break fuera de un loop. 
  *)
 val _ = print "Test51\n";
-val result = expect (compile "test/test51.tig") NONE (* TODO break *)
+val result = expect (compile "test/test51.tig")
+  (SOME "break incorrecto")
 val _ = printResult result
 
 (* test52
@@ -484,7 +485,7 @@ val _ = printResult result
  *)
 val _ = print "Test56\n";
 val result = expect (compile "test/test56.tig") 
-  (SOME "tipos no comparables por igualdad")
+  (SOME "comparación nils")
 val _ = printResult result
 
 (* test57

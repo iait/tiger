@@ -108,13 +108,9 @@ structure trans :> trans = struct
     let
       (* printStms : tree.stm list -> unit *)
       val printStms = (List.app print) o (List.map treepp.tree)
-      
-      (* nombreFrame : frame -> unit *)
-      fun nombreFrame frame = print(".globl " ^ frame.name frame ^ "\n")
 
       (* printFrag : frag -> unit *)
-      fun printFrag (PROC {body, frame}) = 
-            (nombreFrame frame; printStms body)
+      fun printFrag (PROC {body, frame}) = printStms body
         | printFrag (STRING (l, "")) = print (l^":\n")
         | printFrag (STRING ("", s)) = print ("\t"^s^"\n")
         | printFrag (STRING (l, s)) = print (l^":\t"^s^"\n")
