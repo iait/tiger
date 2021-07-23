@@ -22,9 +22,8 @@ signature frame = sig
   val fpPrevLev : int            (* ubicación del static link *)
 
   val argRegs : temp.temp list
-  val callDefs : temp.temp list
-  val callerSaves : temp.temp list
-  val calleeSaves : temp.temp list
+  val callerSave : temp.temp list
+  val calleeSave : temp.temp list
   val specialRegs : temp.temp list
 
   (* crea un nuevo frame *)

@@ -58,9 +58,8 @@ structure frame :> frame = struct
   val argsGap = 2*wSz          (* gap para el primer arg en el stack *)
 
   val argRegs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
-  val callDefs = [rv] (*TODO no sé qué es*)
-  val callerSaves = ["r10", "r11"] (* TODO y todo el resto no? *)
-  val calleeSaves = ["rbp", "rbx", "r12", "r13", "r14", "r15"]
+  val callerSave = ["rax", "rcx", "rdx", "rsi", "rdi", "r8", "r9", "r10", "r11"]
+  val calleeSave = ["rbx", "rbp", "rsp", "r12", "r13", "r14", "r15"]
   val specialRegs = [rv, fp, sp]
 
   (* crea un nuevo frame *)
