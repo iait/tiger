@@ -45,6 +45,8 @@ structure frame :> frame = struct
   val rv = "rax"               (* return value  *)
   val fp = "rbp"               (* frame pointer *)
   val sp = "rsp"               (* stack pointer *)
+  val rax = "rax"              (* para la división *)
+  val rdx = "rdx"              (* para la división *)
   
   val wSz = 8                  (* tamaño de la palabra *)
   val log2wSz = 3              (* log base 2 de word size *)

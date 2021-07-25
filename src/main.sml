@@ -8,6 +8,8 @@ open BasicIO Nonstdio
 open error
 open trans
 open interp
+open codegen
+open assem
 
 (* lexstream : instream -> lexbuf *)
 fun lexstream (is: instream) =
@@ -57,12 +59,14 @@ fun main args =
     val canonList : frag list = canonize fragList
     (* imprime código intermedio canonizado *)
     val _ = if canon then printIr canonList else ()
-    (* TODO code *)
-    (* TODO flow *)
     (* separa lista de fragmentos en procedimientos y strings *)
-    val (ps, ss) = splitFrags canonList
+    val (ps: (tree.stm list * frame.frame) list, ss: (label * string) list) = 
+      splitFrags canonList
     (* interpreta código intermedio canonizado *)
     val _ = if inter then interp true ps ss else ()
+    (* genera assembler de los procedimientos *)
+    val _ = List.app codegen.aux ps
+    (* TODO flow *)
   in
     print "----Fin de la compilación\n"
   end	handle Fail s => print("Fail: "^s^"\n")
