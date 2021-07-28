@@ -5,6 +5,7 @@ structure interp :> interp = struct
   open tree
   open frame
   open temp
+  open treepp
 
   (* Memoria y registros *)
   local
@@ -341,7 +342,7 @@ structure interp :> interp = struct
           if not showDebug then () 
           else (
             print((frame.name frame)^":\n");
-            List.app (print o treepp.tree) body;
+            List.app (print o printTreeStm) body;
             print("Argumentos: ");
             List.app (fn n => (print(Int.toString(n));
             print("  "))) args;
@@ -358,7 +359,7 @@ structure interp :> interp = struct
                   printTemps();
                   printMem();
                   print("****************\n");
-                  print(treepp.tree(x));
+                  print(printTreeStm(x));
                   print("****************\n"))
             in
               case evalStm x of

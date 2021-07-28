@@ -495,6 +495,7 @@ structure seman :> seman = struct
                   val venv'' = tabInserList (venv', List.map (paramToVar nl) params)
                   (* traduce la expresión del body de la función *)
                   val {exp=expbody, ty=tybody} = transExp (venv'', tenv) body
+                  (*val DEBUG = printTransExp expbody*)
                   (* verifica que coincida con el tipo de retorno declarado *)
                   val tyresult = tipoRetorno nl result
                   val _ = if tiposIguales tybody tyresult then ()

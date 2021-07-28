@@ -67,7 +67,8 @@ depend: ast.sml parser.sml lexer.sml line.sml astpp.sml table.sml escape.sml \
 
 ### DO NOT DELETE THIS LINE
 temp.uo: temp.ui 
-interp.uo: interp.ui table.ui temp.ui frame.ui treepp.uo tree.uo 
+treepp.ui: tree.uo 
+interp.uo: interp.ui table.ui temp.ui frame.ui treepp.ui tree.uo 
 tree.uo: temp.ui 
 util.uo: util.ui ast.uo 
 escape.uo: escape.ui table.ui ast.uo 
@@ -96,11 +97,11 @@ seman.ui: ast.uo
 util.ui: ast.uo 
 codegen.ui: frame.ui assem.uo tree.uo 
 regalloc.ui: frame.ui assem.uo 
-treepp.uo: table.ui tree.uo 
+treepp.uo: treepp.ui table.ui tree.uo 
 table.uo: table.ui 
 stack.uo: stack.ui 
 parser.ui: ast.uo 
-trans.uo: trans.ui temp.ui frame.ui ast.uo canon.ui treepp.uo tree.uo \
+trans.uo: trans.ui temp.ui frame.ui ast.uo canon.ui treepp.ui tree.uo \
     stack.ui 
 typepp.ui: table.ui tentry.uo 
 regalloc.uo: regalloc.ui frame.ui assem.uo 

@@ -52,6 +52,8 @@ fun main args =
     val _ = print "----Traducción a código intermedio\n"
     val _ = transProg expr
     val fragList : frag list = getResult()
+    (*val DEGUB = print 
+      ("cantidad de fragmentos: "^((Int.toString o List.length) fragList)^"\n")*)
     (* imprime código intermedio *)
     val _ = if ir then printIr fragList else ()
     (* canoniza código intermedio *)
@@ -65,7 +67,7 @@ fun main args =
     (* interpreta código intermedio canonizado *)
     val _ = if inter then interp true ps ss else ()
     (* genera assembler de los procedimientos *)
-    val _ = List.app codegen.aux ps
+    val _ = List.app codegen ps
     (* TODO flow *)
   in
     print "----Fin de la compilación\n"

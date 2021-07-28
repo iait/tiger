@@ -222,21 +222,20 @@ structure codegen :> codegen = struct
 
     | munchStm _ = raise Fail "no debería llegar este tipo de sentencias"
 
-  (* codegen : frame.frame -> tree.stm -> assem.instr list *)
-  fun codegen frame stm = (munchStm stm; rev (!ilist))
+  (* originalCodegen : frame.frame -> tree.stm -> assem.instr list *)
+  fun originalCodegen frame stm = (munchStm stm; rev (!ilist))
 
-  (* aux : stm list * frame -> unit *)
-  fun aux (stms, frame) =
+  (* codegen : stm list * frame -> unit *)
+  fun codegen (stms, frame) =
     let
-      fun aux2 frame stm =
-        let
-          val instrs = codegen frame stm
-        in
-          List.app (print o (format (fn temp => temp))) instrs
-        end
+      val _ = ilist := []
+      (*val DEBUG = 
+        print ("cantidad de stms: "^((Int.toString o List.length) stms)^"\n")*)
+      val _ = List.app munchStm stms
+      val instrs = rev (!ilist)
     in
       print ((name frame)^":\n");
-      List.app (aux2 frame) stms
+      List.app (print o (format (fn temp => temp))) instrs 
     end 
 
 end

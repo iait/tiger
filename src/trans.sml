@@ -6,6 +6,7 @@ structure trans :> trans = struct
   open ast
   open stack
   open canon
+  open treepp
 
   exception Break
   exception DivByZero
@@ -48,6 +49,11 @@ structure trans :> trans = struct
   datatype exp = Ex of tree.exp
                | Nx of tree.stm
                | Cx of label * label -> tree.stm
+
+  (* DEBUG *)
+  fun printTransExp (Ex e) = (print "exp: "; print (printTreeExp e)) 
+    | printTransExp (Nx s) = print "stm"
+    | printTransExp (Cx c) = print "cond"
 
   (* seq : tree.stm list -> tree.stm *)
   fun seq [] = EXP (CONST 0)
@@ -107,7 +113,7 @@ structure trans :> trans = struct
   fun printIr fragList =
     let
       (* printStms : tree.stm list -> unit *)
-      val printStms = (List.app print) o (List.map treepp.tree)
+      val printStms = (List.app print) o (List.map printTreeStm)
 
       (* printFrag : frag -> unit *)
       fun printFrag (PROC {body, frame}) = printStms body
@@ -116,11 +122,11 @@ structure trans :> trans = struct
         | printFrag (STRING (l, s)) = print (l^":\t"^s^"\n")
 
       (* aux : frag list -> unit *)
-      fun aux [] = ()
-        | aux (h::t) = (printFrag h; aux t)
+      fun aux [] _ = ()
+        | aux (h::t) n = (print (Int.toString(n)^") "); printFrag h; aux t (n+1))
 
     in 
-      aux fragList
+      aux fragList 0
     end
 
   (* canonize : frag list -> frag list *)
