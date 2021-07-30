@@ -38,6 +38,9 @@ signature table = sig
    *)
   val tabSaca : ''a * (''a, 'b) Tabla -> 'b
 
+  (* Elimina la asociación de la clave de la tabla *)
+  val tabElimina : ''a * (''a, 'b) Tabla -> 'b
+
   (* Devuelve una nueva tabla cuyos valores son el resultado de aplicarle la 
    * función proporcionada 
    *)

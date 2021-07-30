@@ -24,7 +24,7 @@ structure regalloc :> regalloc = struct
             else 
               ""
         in
-          OPER {assem="mov `s0 M(a" ^ desp ^ ")", src=[temp], dst=[], jump=NONE}
+          OPER {assem="mov `s0 M(a" ^ desp ^ ")", src=[temp], dst=[], jmp=[]}
         end
       fun movaTemp(mempos, temp) =
         let
@@ -36,15 +36,15 @@ structure regalloc :> regalloc = struct
             else 
               ""
         in
-          OPER {assem="mov M(a" ^ desp ^ ") `d0", src=[], dst=[temp], jump=NONE}
+          OPER {assem="mov M(a" ^ desp ^ ") `d0", src=[], dst=[temp], jmp=[]}
         end
       val temps =
         let
           val tempList = 
             let
               fun f (OPER r, tmplist) = List.concat [#dst r, #src r, tmplist]
-                | f (LABEL _, tmplist) = tmplist
-                | f (MOVE r, tmplist) = (#dst r)::(#src r)::tmplist
+                | f (LAB _, tmplist) = tmplist
+                | f (MOV r, tmplist) = (#dst r)::(#src r)::tmplist
             in
               List.foldr f [] body
             end
@@ -54,8 +54,10 @@ structure regalloc :> regalloc = struct
           Splayset.listItems(Splayset.difference(s, precoloredSet))
         end
     
+      fun offset (InFrame n) = n
+        | offset _ = raise Fail "InReg"
       val accesses = 
-        map (fn T => let val InFrame n = allocLocal frm true in (T, n) end) temps
+        map (fn T => let val access = allocLocal frm true in (T, offset access) end) temps
       fun getFramePos T =
         let
           fun gfp T [] = raise Fail("Temporario no encontrado: "^T)
@@ -64,7 +66,7 @@ structure regalloc :> regalloc = struct
           gfp T accesses
         end
     
-      fun rewriteInstr (OPER {assem, dst, src, jump}) =
+      fun rewriteInstr (OPER {assem, dst, src, jmp}) =
         let
           val eset = Splayset.empty String.compare
           val precoloredSet = Splayset.addList(eset, precolored)
@@ -103,18 +105,18 @@ structure regalloc :> regalloc = struct
           end
           val newdst = map getTempCol dst
           val newsrc = map getTempCol src
-          val newinstr = OPER {assem=assem, dst=newdst, src=newsrc, jump=jump}
+          val newinstr = OPER {assem=assem, dst=newdst, src=newsrc, jmp=jmp}
         in
           List.concat [prevMovs, [newinstr], posMovs]
         end
-        | rewriteInstr (LABEL l) = [LABEL l]
-        | rewriteInstr (MOVE {assem, dst, src}) =
+        | rewriteInstr (LAB l) = [LAB l]
+        | rewriteInstr (MOV {assem, dst, src}) =
         let
           val precoloredSet = Splayset.addList(
             Splayset.empty String.compare, precolored)
         in
           if Splayset.member(precoloredSet, dst) andalso Splayset.member(precoloredSet, src) then
-            [OPER {assem=assem, dst=[dst], src=[src], jump=NONE}]
+            [OPER {assem=assem, dst=[dst], src=[src], jmp=[]}]
           else if Splayset.member(precoloredSet, dst) then 
             [movaTemp(getFramePos src, dst)]
           else if Splayset.member(precoloredSet, src) then 

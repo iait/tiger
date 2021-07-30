@@ -25,7 +25,7 @@ MOVE=mv
 GRALOBJS=ast.uo parser.uo lexer.uo line.uo astpp.uo table.uo escape.uo \
 	trans.uo tentry.uo ventry.uo temp.uo topsort.uo seman.uo typepp.uo \
 	util.uo error.uo frame.uo tree.uo treepp.uo stack.uo canon.uo \
-	interp.uo assem.uo codegen.uo main.uo
+	interp.uo assem.uo codegen.uo regalloc.uo graph.uo main.uo
 
 all: tiger
 
@@ -59,7 +59,7 @@ clean:
 depend: ast.sml parser.sml lexer.sml line.sml astpp.sml table.sml escape.sml \
 	trans.sml tentry.sml ventry.sml temp.sml topsort.sml seman.sml typepp.sml \
 	util.sml error.sml frame.sml tree.sml treepp.sml stack.sml canon.sml \
-	interp.sml assem.sml codegen.sml main.sml test.sml
+	interp.sml assem.sml codegen.sml regalloc.sml graph.sml main.sml test.sml
 	$(REMOVE) Makefile.bak
 	$(MOVE) Makefile Makefile.bak
 	$(MOSMLTOOLS)/cutdeps < Makefile.bak > Makefile
@@ -97,6 +97,7 @@ seman.ui: ast.uo
 util.ui: ast.uo 
 codegen.ui: frame.ui assem.uo tree.uo 
 regalloc.ui: frame.ui assem.uo 
+graph.uo: graph.ui table.ui 
 treepp.uo: treepp.ui table.ui tree.uo 
 table.uo: table.ui 
 stack.uo: stack.ui 

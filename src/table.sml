@@ -34,7 +34,12 @@ structure table :> table = struct
 
   fun tabSaca(s, t) =
         case tabBusca (s, t) 
-          of SOME t => t
+          of SOME e => e
+           | NONE => raise noExiste
+
+  fun tabElimina(s, t) =
+        case tabBusca (s, t) 
+          of SOME e => remove t s
            | NONE => raise noExiste
 
   fun tabAplica (f, t) = map (fn (_, e) => f e) t
