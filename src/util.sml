@@ -20,4 +20,15 @@ structure util :> util = struct
       then raise Duplicated name
       else (name::ns)) []
 
+  (* Genera un string con n espacios *)
+  fun indent n = String.concat (List.tabulate (n, fn _ => " "))
+
+  (* Genera string para mostrar una lista de strings *)
+  fun showStrList l =
+    let
+      fun aux [] = ""
+        | aux [x] = x
+        | aux (x::xs) = x^", "^(aux xs)
+    in "["^(aux l)^"]" end;
+
 end

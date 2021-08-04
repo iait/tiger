@@ -67,8 +67,7 @@ fun main args =
     (* interpreta código intermedio canonizado *)
     val _ = if inter then interp true ps ss else ()
     (* genera assembler de los procedimientos *)
-    val _ = List.app codegen ps
-    (* TODO flow *)
+    val _ = List.app (codegen (flow, inter)) ps
   in
     print "----Fin de la compilación\n"
   end	handle Fail s => print("Fail: "^s^"\n")

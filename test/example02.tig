@@ -1,2 +1,3 @@
 /* otro ejemplo muy simple de Tiger */
+/* $ ./tiger -arbol -ir -canon test/example02.tig */
 2+3

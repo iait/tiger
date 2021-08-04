@@ -1,7 +1,5 @@
 signature codegen = sig
 
-  val originalCodegen : frame.frame -> tree.stm -> assem.instr list
-
-  val codegen : tree.stm list * frame.frame -> unit
+  val codegen : (bool * bool) -> (tree.stm list * frame.frame) -> unit
 
 end

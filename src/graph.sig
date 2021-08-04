@@ -1,6 +1,6 @@
 signature graph = sig
 
-  eqtype node
+  type node = int
   type edge = node * node
   type graph
 
@@ -18,5 +18,8 @@ signature graph = sig
 
   val hasNode : graph -> node -> bool
   val hasEdge : graph -> edge -> bool
+
+  (* imprime el grafo para debug *)
+  val showGraph : int -> graph -> unit
 
 end

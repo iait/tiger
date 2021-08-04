@@ -4,6 +4,9 @@ structure codegen :> codegen = struct
   open tree
   open assem
   open frame
+  open regalloc
+  open graph
+  open flow
 
   (* lista de instrucciones *)
   val ilist = ref ([] : instr list)
@@ -225,17 +228,24 @@ structure codegen :> codegen = struct
   (* originalCodegen : frame.frame -> tree.stm -> assem.instr list *)
   fun originalCodegen frame stm = (munchStm stm; rev (!ilist))
 
-  (* codegen : stm list * frame -> unit *)
-  fun codegen (stms, frame) =
+  (* codegen : (bool * bool) -> (stm list * frame) -> unit *)
+  fun codegen (flow, inter) (stms, frame) =
     let
       val _ = ilist := []
       (*val DEBUG = 
         print ("cantidad de stms: "^((Int.toString o List.length) stms)^"\n")*)
       val _ = List.app munchStm stms
       val instrs = rev (!ilist)
+      (* genera control-flow graph *)
+      val fg = instrs2flowGraph instrs
+      val _ = 
+        if not flow then ()
+        else (print "Control-flow graph\n"; showFlowGraph fg; print "------------\n")
+      (* calcula la asignación de registros *)
+      val (is, saytemp) = regalloc (flow, inter) frame instrs
     in
       print ((name frame)^":\n");
-      List.app (print o (format (fn temp => temp))) instrs 
+      List.app (print o (format saytemp)) is 
     end 
 
 end

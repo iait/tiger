@@ -1,6 +1,7 @@
 structure table :> table = struct
 
   open Polyhash
+  open util
 
   type ('a, 'b) Tabla = ('a, 'b) hash_table
 
@@ -88,5 +89,13 @@ structure table :> table = struct
   fun tabClaves t = List.map (fn (x, _) => x) (listItems t)
 
   fun tabValores t = List.map (fn (_, x) => x) (listItems t)
+
+  (* imprime el contenido de la tabla para debug *)
+  fun showTabla (n, showKey, showValue, t) =
+    let
+      fun aux [] = ()
+        | aux ((a, b)::tl) = 
+            (print ((indent n)^(showKey a)^": "^(showValue b)^"\n"); aux tl)
+    in aux (tabAList t) end
 
 end

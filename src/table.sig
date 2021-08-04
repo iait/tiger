@@ -75,8 +75,11 @@ signature table = sig
 
   (* Retorna una lista con todas las claves *)
   val tabClaves : ('a, 'b) Tabla -> 'a list
-  
+
   (* Retorna una lista con todos los valores *)
   val tabValores : ('a, 'b) Tabla -> 'b list
+
+  (* Imprime el contenido de la tabla para debug *)
+  val showTabla : int * ('a -> string) * ('b -> string) * ('a, 'b) Tabla -> unit
 
 end

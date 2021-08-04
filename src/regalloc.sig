@@ -1,5 +1,8 @@
 signature regalloc = sig
 
-  val regalloc : frame.frame -> assem.instr list -> assem.instr list
+  type allocation = temp.temp -> string
+
+  val regalloc : (bool * bool) -> frame.frame -> assem.instr list -> 
+    assem.instr list * allocation
 
 end

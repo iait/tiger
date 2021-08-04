@@ -2,6 +2,7 @@ structure graph :> graph = struct
 
   open table
   open Splayset
+  open util
 
   type node = int
   type edge = node * node
@@ -86,5 +87,21 @@ structure graph :> graph = struct
     case tabBusca (p, #succ(g)) of
       SOME ss => member (ss, s)
       | NONE => false
+
+  (* showGraph : graph -> unit *)
+  (* imprime el grafo para debug *)
+  fun showGraph n ({nodeCount,succ,pred} : graph) =
+    let
+      val showNode = Int.toString
+      fun showNodeSet s =
+        let
+          fun aux [] = ""
+            | aux [n] = showNode n
+            | aux (n::ns) = (showNode n)^", "^(aux ns)
+        in "{"^(aux (listItems s))^"}" end
+      val _ = print ((indent n)^"nodeCount: "^(Int.toString (!nodeCount))^"\n")
+      val _ = (print ((indent n)^"succ:\n"); showTabla (n+2, showNode, showNodeSet, succ))
+      val _ = (print ((indent n)^"pred:\n"); showTabla (n+2, showNode, showNodeSet, pred))
+    in () end
 
 end
