@@ -8,8 +8,6 @@ signature flow = sig
     nodes: (graph.node, assem.instr) table.Tabla            (* instrucciones para debug *)
   }
 
-  val liveMap : (graph.node, temp.temp Splayset.set) table.Tabla
-
   val instrs2flowGraph : assem.instr list -> flowGraph
 
   (* imprime el control-flow graph para debug *)

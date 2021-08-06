@@ -25,7 +25,8 @@ MOVE=mv
 GRALOBJS=ast.uo parser.uo lexer.uo line.uo astpp.uo table.uo escape.uo \
 	trans.uo tentry.uo ventry.uo temp.uo topsort.uo seman.uo typepp.uo \
 	util.uo error.uo frame.uo tree.uo treepp.uo stack.uo canon.uo \
-	interp.uo assem.uo codegen.uo regalloc.uo graph.uo flow.uo main.uo
+	interp.uo assem.uo codegen.uo regalloc.uo graph.uo flow.uo liveness.uo \
+	main.uo
 
 all: tiger
 
@@ -59,7 +60,7 @@ clean:
 depend: ast.sml parser.sml lexer.sml line.sml astpp.sml table.sml escape.sml \
 	trans.sml tentry.sml ventry.sml temp.sml topsort.sml seman.sml typepp.sml \
 	util.sml error.sml frame.sml tree.sml treepp.sml stack.sml canon.sml \
-	interp.sml assem.sml codegen.sml regalloc.sml graph.sml flow.sml \
+	interp.sml assem.sml codegen.sml regalloc.sml graph.sml flow.sml liveness.sml \
 	main.sml test.sml
 	$(REMOVE) Makefile.bak
 	$(MOVE) Makefile Makefile.bak
@@ -105,10 +106,12 @@ table.uo: table.ui util.ui
 flow.uo: flow.ui table.ui temp.ui graph.ui assem.uo 
 flow.ui: table.ui temp.ui graph.ui assem.uo 
 stack.uo: stack.ui 
+liveness.ui: table.ui temp.ui flow.ui 
 parser.ui: ast.uo 
 trans.uo: trans.ui temp.ui frame.ui ast.uo canon.ui treepp.ui tree.uo \
     stack.ui 
 typepp.ui: table.ui tentry.uo 
-regalloc.uo: regalloc.ui temp.ui frame.ui flow.ui assem.uo 
+regalloc.uo: regalloc.ui temp.ui frame.ui flow.ui assem.uo liveness.ui 
 interp.ui: temp.ui frame.ui tree.uo 
+liveness.uo: liveness.ui table.ui temp.ui graph.ui flow.ui assem.uo util.ui 
 topsort.uo: topsort.ui table.ui tentry.uo ast.uo util.ui 

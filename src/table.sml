@@ -90,6 +90,16 @@ structure table :> table = struct
 
   fun tabValores t = List.map (fn (_, x) => x) (listItems t)
 
+  fun tabIguales cmp (t1, t2) =
+    let
+      val temp = fromTab t2
+      fun aux [] = tabClaves temp = nil
+        | aux ((k,v)::ts) = 
+            (cmp (v, tabElimina (k, temp)) andalso aux ts) handle noExiste => false
+    in
+      aux (tabAList t1)
+    end
+
   (* imprime el contenido de la tabla para debug *)
   fun showTabla (n, showKey, showValue, t) =
     let

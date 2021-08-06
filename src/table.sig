@@ -79,6 +79,9 @@ signature table = sig
   (* Retorna una lista con todos los valores *)
   val tabValores : ('a, 'b) Tabla -> 'b list
 
+  (* Compara por igualdad dos tablas *)
+  val tabIguales : ('b * 'b -> bool) -> ((''a, 'b) Tabla * (''a, 'b) Tabla) -> bool
+
   (* Imprime el contenido de la tabla para debug *)
   val showTabla : int * ('a -> string) * ('b -> string) * ('a, 'b) Tabla -> unit
 

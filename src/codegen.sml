@@ -236,11 +236,6 @@ structure codegen :> codegen = struct
         print ("cantidad de stms: "^((Int.toString o List.length) stms)^"\n")*)
       val _ = List.app munchStm stms
       val instrs = rev (!ilist)
-      (* genera control-flow graph *)
-      val fg = instrs2flowGraph instrs
-      val _ = 
-        if not flow then ()
-        else (print "Control-flow graph\n"; showFlowGraph fg; print "------------\n")
       (* calcula la asignación de registros *)
       val (is, saytemp) = regalloc (flow, inter) frame instrs
     in

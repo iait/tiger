@@ -11,11 +11,8 @@ structure flow :> flow = struct
     def: (node, temp set) Tabla,    (* temporarios definidos en cada nodo *)
     use: (node, temp set) Tabla,    (* temporarios utilizados en cada nodo *)
     isMove: (node, bool) Tabla,     (* si la intrucción es un move *)
-    nodes: (node, instr) Tabla      (* instrucciones para debug *)
+    nodes: (node, instr) Tabla     (* instrucciones para debug *)
   }
-
-  (* liveMap : (node, temp set) table *)
-  val liveMap = tabNueva()
 
   (* instrs2flowGraph : assem.instr list -> flowGraph *)
   fun instrs2flowGraph is =
@@ -38,6 +35,7 @@ structure flow :> flow = struct
       (* asocia el nodo con todos los labels de la lista *)
       fun insertNodeLabels n ls = List.app (fn l => tabMete (l, n, labelMap)) ls
       (* añade las instrucciones como nodos al grafo *)
+      (* recibe los labels que definen la próxima instrucción y la lista de instrucciones *)
       fun makeNodes ls [] = ls
         | makeNodes ls ((i as OPER {assem,dst,src,jmp})::is) =
             let
@@ -58,10 +56,20 @@ structure flow :> flow = struct
               val _ = tabMete (n, i, nodes)
               val _ = insertNodeLabels n ls
             in makeNodes [] is end
+      (* nodo inicial *)
+      val startNode = addNewNode control (* TODO completar def *)
+      val _ = tabMete (startNode, makeSet [], def)
+      val _ = tabMete (startNode, makeSet [], use)
+      val _ = tabMete (startNode, false, isMove)
+      val _ = tabMete (startNode, OPER {assem="",dst=[],src=[],jmp=[]}, nodes)
       (* crea los nodos y llena el mapa de labels *)
-      val startNode = addNewNode control (* completar def *)
       val ls = makeNodes [] is
-      val endNode = addNewNode control (* completar use *)
+      (* nodo final *)
+      val endNode = addNewNode control (* TODO completar use *)
+      val _ = tabMete (endNode, makeSet [], def)
+      val _ = tabMete (endNode, makeSet ["rax"], use)
+      val _ = tabMete (endNode, false, isMove)
+      val _ = tabMete (endNode, OPER {assem="",dst=[],src=[],jmp=[]}, nodes)
       val _ = insertNodeLabels endNode ls
       (* añade una arista dado un nodo y un label
        * el nodo sucesor se buscará en labelMap *)
