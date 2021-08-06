@@ -97,13 +97,13 @@ main.uo: parser.ui trans.ui interp.ui codegen.ui astpp.ui seman.ui lexer.uo \
     line.uo frame.ui error.uo ast.uo assem.uo tree.uo escape.ui 
 typepp.uo: typepp.ui table.ui tentry.uo 
 seman.ui: ast.uo 
-util.ui: ast.uo 
+util.ui: temp.ui ast.uo 
 codegen.ui: frame.ui tree.uo 
 regalloc.ui: temp.ui frame.ui assem.uo 
 graph.uo: graph.ui table.ui util.ui 
 treepp.uo: treepp.ui table.ui tree.uo 
 table.uo: table.ui util.ui 
-flow.uo: flow.ui table.ui temp.ui graph.ui assem.uo 
+flow.uo: flow.ui table.ui temp.ui graph.ui frame.ui assem.uo util.ui 
 flow.ui: table.ui temp.ui graph.ui assem.uo 
 stack.uo: stack.ui 
 liveness.ui: table.ui temp.ui flow.ui 
@@ -111,7 +111,8 @@ parser.ui: ast.uo
 trans.uo: trans.ui temp.ui frame.ui ast.uo canon.ui treepp.ui tree.uo \
     stack.ui 
 typepp.ui: table.ui tentry.uo 
-regalloc.uo: regalloc.ui temp.ui frame.ui flow.ui assem.uo liveness.ui 
+regalloc.uo: regalloc.ui temp.ui frame.ui flow.ui assem.uo stack.ui \
+    liveness.ui 
 interp.ui: temp.ui frame.ui tree.uo 
 liveness.uo: liveness.ui table.ui temp.ui graph.ui flow.ui assem.uo util.ui 
 topsort.uo: topsort.ui table.ui tentry.uo ast.uo util.ui 

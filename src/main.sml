@@ -28,11 +28,12 @@ fun main args =
     val (escapes, l2) = arg (l1, "-escapes")
     val (ir, l3)      = arg (l2, "-ir")
     val (canon, l4)   = arg (l3, "-canon")
-    val (code, l5)    = arg (l4, "-code")
+    val (interp, l5)  = arg (l4, "-interp")
     val (flow, l6)    = arg (l5, "-flow")
     val (inter, l7)   = arg (l6, "-inter")
+    val (code, l8)    = arg (l7, "-code")
     (* instream *)
-    val entrada = case l7 
+    val entrada = case l8
       of [n] => ((open_in n) handle _ => raise Fail (n^" no existe!"))
        | []  => std_in
        | _   => raise Fail "opción desconocida!"
@@ -65,7 +66,7 @@ fun main args =
     val (ps: (tree.stm list * frame.frame) list, ss: (label * string) list) = 
       splitFrags canonList
     (* interpreta código intermedio canonizado *)
-    val _ = if inter then interp true ps ss else ()
+    val _ = if interp then interpret true ps ss else ()
     (* genera assembler de los procedimientos *)
     val _ = List.app (codegen (flow, inter)) ps
   in

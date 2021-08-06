@@ -61,8 +61,8 @@ structure frame :> frame = struct
 
   val argRegs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
   val callerSave = ["rax", "rcx", "rdx", "rsi", "rdi", "r8", "r9", "r10", "r11"]
-  val calleeSave = ["rbx", "rbp", "rsp", "r12", "r13", "r14", "r15"]
-  val specialRegs = [rv, fp, sp]
+  val calleeSave = ["rbx", "r12", "r13", "r14", "r15"]
+  val machineRegs = callerSave @ calleeSave (* 14 registros *)
 
   (* crea un nuevo frame *)
   fun newFrame {name, formals} = {

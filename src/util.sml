@@ -1,6 +1,7 @@
 structure util :> util = struct
 
   open ast
+  open Splayset
   
   exception Duplicated of string
 
@@ -30,5 +31,10 @@ structure util :> util = struct
         | aux [x] = x
         | aux (x::xs) = x^", "^(aux xs)
     in "["^(aux l)^"]" end;
+
+  (* crea un nuevo set a partir de una lista de temporales *)
+  fun makeTempSet [] = empty String.compare
+    | makeTempSet [t] = singleton String.compare t
+    | makeTempSet ts = addList (empty String.compare, ts)
 
 end

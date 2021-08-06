@@ -14,20 +14,17 @@ structure liveness :> liveness = struct
     moves: (temp * temp) list
   }
 
-  (* crea un conjunto nuevo de temporales *)
-  fun makeSet() = empty String.compare
-
   (* agrega una arista al grafo de interferencias *)
   fun addEdge adj (t1, t2) =
     let
       val adj1 = case tabBusca (t1, adj) of
-        NONE => makeSet()
-        | SOME s => s
-      val _ = tabMete (t1, add (adj1, t2), adj)
+        NONE => if t1=t2 then makeTempSet [] else makeTempSet [t2]
+        | SOME s => if t1=t2 then s else add (s, t2)
       val adj2 = case tabBusca (t2, adj) of
-        NONE => makeSet()
-        | SOME s => s
-      val _ = tabMete (t2, add (adj2, t1), adj)
+        NONE => if t2=t1 then makeTempSet [] else makeTempSet [t1]
+        | SOME s => if t2=t1 then s else add (s, t1)
+      val _ = tabMete (t1, adj1, adj)
+      val _ = tabMete (t2, adj2, adj)
     in () end
 
   (* mapas con los liveIn y liveOut de cada nodo *)
@@ -56,16 +53,16 @@ structure liveness :> liveness = struct
             liveIn = fromTab liveIn, liveOut = fromTab liveOut
           }
           (* une una lista de conjuntos *)
-          fun unionList [] = makeSet()
+          fun unionList [] = makeTempSet []
             | unionList [s] = s
             | unionList (s1::s2::ss) = unionList (union (s1, s2)::ss)
           (* itera sobre los nodos *)
           fun iter [] lms = ()
             | iter (n::ns) (lms as {liveIn,liveOut}) =
                 let
-                  val _ = print ("nodo: "^(Int.toString n)^"\n")
+                  (*val _ = print ("nodo: "^(Int.toString n)^"\n")*)
                   fun tabSacaOrEmpty (n, t) = 
-                    tabSaca (n, t) handle noExiste => makeSet()
+                    tabSaca (n, t) handle noExiste => makeTempSet []
                   (* calcula nuevo liveIn para n *)
                   val use = tabSaca (n, use)
                   val def = tabSaca (n, def)

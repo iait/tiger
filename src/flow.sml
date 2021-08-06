@@ -5,6 +5,8 @@ structure flow :> flow = struct
   open table
   open temp
   open assem
+  open util
+  open frame
 
   type flowGraph = {
     control: graph,                 (* control-flow directed graph *)
@@ -28,10 +30,6 @@ structure flow :> flow = struct
       }
       (* mapa que asocia los labels con los nodos *)
       val labelMap : (label, node) Tabla = tabNueva()
-      (* crea un nuevo set a partir de una lista de temporales *)
-      fun makeSet [] = empty String.compare
-        | makeSet [t] = singleton String.compare t
-        | makeSet ts = addList (empty String.compare, ts)
       (* asocia el nodo con todos los labels de la lista *)
       fun insertNodeLabels n ls = List.app (fn l => tabMete (l, n, labelMap)) ls
       (* añade las instrucciones como nodos al grafo *)
@@ -40,8 +38,8 @@ structure flow :> flow = struct
         | makeNodes ls ((i as OPER {assem,dst,src,jmp})::is) =
             let
               val n = addNewNode control
-              val _ = tabMete (n, makeSet dst, def)
-              val _ = tabMete (n, makeSet src, use)
+              val _ = tabMete (n, makeTempSet dst, def)
+              val _ = tabMete (n, makeTempSet src, use)
               val _ = tabMete (n, false, isMove)
               val _ = tabMete (n, i, nodes)
               val _ = insertNodeLabels n ls
@@ -50,24 +48,24 @@ structure flow :> flow = struct
         | makeNodes ls ((i as MOV {assem,dst,src})::is) =
             let
               val n = addNewNode control
-              val _ = tabMete (n, makeSet [dst], def)
-              val _ = tabMete (n, makeSet [src], use)
+              val _ = tabMete (n, makeTempSet [dst], def)
+              val _ = tabMete (n, makeTempSet [src], use)
               val _ = tabMete (n, true, isMove)
               val _ = tabMete (n, i, nodes)
               val _ = insertNodeLabels n ls
             in makeNodes [] is end
       (* nodo inicial *)
       val startNode = addNewNode control (* TODO completar def *)
-      val _ = tabMete (startNode, makeSet [], def)
-      val _ = tabMete (startNode, makeSet [], use)
+      val _ = tabMete (startNode, makeTempSet [], def)
+      val _ = tabMete (startNode, makeTempSet [], use)
       val _ = tabMete (startNode, false, isMove)
       val _ = tabMete (startNode, OPER {assem="",dst=[],src=[],jmp=[]}, nodes)
       (* crea los nodos y llena el mapa de labels *)
       val ls = makeNodes [] is
       (* nodo final *)
       val endNode = addNewNode control (* TODO completar use *)
-      val _ = tabMete (endNode, makeSet [], def)
-      val _ = tabMete (endNode, makeSet ["rax"], use)
+      val _ = tabMete (endNode, makeTempSet [], def)
+      val _ = tabMete (endNode, makeTempSet [rax], use)
       val _ = tabMete (endNode, false, isMove)
       val _ = tabMete (endNode, OPER {assem="",dst=[],src=[],jmp=[]}, nodes)
       val _ = insertNodeLabels endNode ls

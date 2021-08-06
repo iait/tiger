@@ -26,7 +26,7 @@ signature frame = sig
   val argRegs : temp.temp list
   val callerSave : temp.temp list
   val calleeSave : temp.temp list
-  val specialRegs : temp.temp list
+  val machineRegs : temp.temp list
 
   (* crea un nuevo frame *)
   val newFrame : {name: temp.label, formals: bool list} -> frame
