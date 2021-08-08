@@ -28,20 +28,32 @@ structure regalloc :> regalloc = struct
     activeMoves: move list        (* todavía no listos para fusionar *)
   }
 
+(*
   (* build : instr list -> workspace *)
   fun build instrs : workspace =
     let
+      (* contruye control-flow graph y grafo de interferencias *)
       val fg = instrs2flowGraph instrs
-      val ig = flow2interGraph fg
+      val (ig as {adj,moves}) = flow2interGraph fg
+      (* cantidad de colores *)
+      val K = List.length machineRegs
+      (* clasifica los temps en low-degree, move-related, high-degree *)
+      fun classify [] (ld, mr, hd) = (ld, mr, hd)
+        | classify (t::ts) (ld, mr, hd) =
+            if numItems (tabSaca (t, adj)) < K then (ld, mr, hd)
+            else (ld, mr, hd)
+      val _ = tabClaves adj
     in
       {
         inter = ig,
+        
         simplifyWorkList = [],
         freezeWorkList = [],
         spillWorkList = [],
         spilledNodes = [],
         coalescedNodes = [],
         seleckStack = nuevaPila(),
+        
         coalescedMoves = [],
         constrainedMoves = [],
         frozenMoves = [],
@@ -49,7 +61,7 @@ structure regalloc :> regalloc = struct
         activeMoves = []
       }
     end
-
+*)
   fun regalloc (flow, inter) frame instrs =
     let
       (* genera control-flow graph *)

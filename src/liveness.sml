@@ -11,7 +11,8 @@ structure liveness :> liveness = struct
   (* grafo de interferencias *)
   type interGraph = {
     adj: (temp, temp set) Tabla,
-    moves: (temp * temp) list
+    moves: (temp * temp) list,
+    movCount: (temp, int) Tabla
   }
 
   (* agrega una arista al grafo de interferencias *)
@@ -26,6 +27,16 @@ structure liveness :> liveness = struct
       val _ = tabMete (t1, adj1, adj)
       val _ = tabMete (t2, adj2, adj)
     in () end
+
+  (* actualiza la cuenta de mov *)
+  fun addMovCount movCount (t1, t2) =
+    let
+      fun aux t = case tabBusca (t, movCount) of
+        NONE => tabMete (t, 1, movCount)
+        | SOME n => tabMete (t, n+1, movCount)
+    in
+      if t1=t2 then aux t1 else (aux t1; aux t2)
+    end
 
   (* mapas con los liveIn y liveOut de cada nodo *)
   type liveMaps = {
@@ -84,7 +95,7 @@ structure liveness :> liveness = struct
       val {liveIn, liveOut} = liveness ns {liveIn=tabNueva(), liveOut=tabNueva()}
       (* función para calcular el grafo de interferencias *)
       fun interference [] liveOut inter = inter
-        | interference ((n, OPER _)::ns) liveOut (inter as {adj,moves}) =
+        | interference ((n, OPER _)::ns) liveOut (inter as {adj,moves,movCount}) =
             let
               val defs = listItems (tabSaca (n, def))
               val outs = listItems (tabSaca (n, liveOut))
@@ -92,20 +103,26 @@ structure liveness :> liveness = struct
             in
               interference ns liveOut inter
             end
-        | interference ((n, MOV {assem,dst,src})::ns) liveOut {adj,moves} =
+        | interference ((n, MOV {assem,dst,src})::ns) liveOut {adj,moves,movCount} =
             let
               val outs = listItems (tabSaca (n, liveOut))
               val _ = List.app (fn b => if b=src then () else addEdge adj (dst, b)) outs
+              val _ = addMovCount movCount (src, dst)
+              val inter' = {
+                adj = adj,
+                moves = (src,dst)::moves,
+                movCount = movCount
+              }
             in
-              interference ns liveOut {adj=adj, moves=(src,dst)::moves}
+              interference ns liveOut inter'
             end
         | interference ((n, LAB _)::ns) liveOut inter = raise Fail "No debería llegar LAB"
     in
-      interference (tabAList nodes) liveOut {adj=tabNueva(), moves=[]}
+      interference (tabAList nodes) liveOut {adj=tabNueva(), moves=[], movCount=tabNueva()}
     end
 
   (* imprime el grafo de interferencias para debug *)
-  fun showInterGraph ({adj,moves} : interGraph) =
+  fun showInterGraph ({adj,moves,movCount} : interGraph) =
     let
       fun showTemp t = t
       fun showTempSet s =
@@ -117,6 +134,7 @@ structure liveness :> liveness = struct
       fun showMove (t1, t2) = t2^"<-"^t1
       val _ = (print "adj:\n"; showTabla (2, showTemp, showTempSet, adj))
       val _ = (print "moves:\n"; print (showStrList (List.map showMove moves)); print "\n")
+      val _ = (print "movCount:\n"; showTabla (2, showTemp, Int.toString, movCount))
     in () end
 
 end

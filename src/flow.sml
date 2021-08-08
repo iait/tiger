@@ -73,8 +73,7 @@ structure flow :> flow = struct
        * el nodo sucesor se buscará en labelMap *)
       fun addNodeLabelEdge n l = addEdge control (n, tabSaca (l, labelMap))
       (* completa las aristas *)
-      fun makeEdges NONE [] = ()
-        | makeEdges (SOME n) [] = addEdge control (n, endNode)
+      fun makeEdges _ [] = ()
         | makeEdges prev ((n, OPER {assem,dst,src,jmp})::ns) =
             let
               val _ = case prev of
@@ -91,7 +90,7 @@ structure flow :> flow = struct
                 | SOME p => addEdge control (p, n)
             in makeEdges (SOME n) ns end
         | makeEdges _ _ = raise Fail "no debería llegar LAB"
-      val _ = makeEdges (SOME startNode) (tabAList nodes)
+      val _ = makeEdges NONE (tabAList nodes)
     in fg end
 
   (* imprime el control-flow graph para debug *)
