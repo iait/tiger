@@ -17,16 +17,32 @@ structure liveness :> liveness = struct
 
   (* agrega una arista al grafo de interferencias *)
   fun addEdge adj (t1, t2) =
+    if t1 = t2 then
+      if tabEsta (t1, adj) then () else tabMete (t1, makeTempSet [], adj)
+    else
+      let
+        val adj1 = (tabSaca (t1, adj)) handle noExiste => makeTempSet []
+        val adj2 = (tabSaca (t2, adj)) handle noExiste => makeTempSet []
+      in
+        tabMete (t1, add (adj1, t2), adj);
+        tabMete (t2, add (adj2, t1), adj)
+      end
+
+  (* elimina un nodo non-move related del grafo *)
+  fun removeNode (inter as {adj,moves,movCount}) t =
     let
-      val adj1 = case tabBusca (t1, adj) of
-        NONE => if t1=t2 then makeTempSet [] else makeTempSet [t2]
-        | SOME s => if t1=t2 then s else add (s, t2)
-      val adj2 = case tabBusca (t2, adj) of
-        NONE => if t2=t1 then makeTempSet [] else makeTempSet [t1]
-        | SOME s => if t2=t1 then s else add (s, t1)
-      val _ = tabMete (t1, adj1, adj)
-      val _ = tabMete (t2, adj2, adj)
-    in () end
+      val adj' = fromTab adj
+      val neighbors = tabElimina (t, adj')
+      (*
+      val _ = print ("eliminando temporal "^t^"\n")
+      val _ = print ("vecinos: "^(setToStr id neighbors)^"\n")
+      *)
+      fun aux n = tabMete (n, delete (tabSaca (n, adj'), t), adj')
+      val _ = Splayset.app aux neighbors
+      val movCount' = fromTab movCount
+    in
+      {adj=adj', moves=moves, movCount=movCount'}
+    end
 
   (* actualiza la cuenta de mov *)
   fun addMovCount movCount (t1, t2) =
@@ -133,7 +149,7 @@ structure liveness :> liveness = struct
         in "{"^(aux (listItems s))^"}" end
       fun showMove (t1, t2) = t2^"<-"^t1
       val _ = (print "adj:\n"; showTabla (2, showTemp, showTempSet, adj))
-      val _ = (print "moves:\n"; print (showStrList (List.map showMove moves)); print "\n")
+      val _ = (print "moves:\n"; print (listToStr showMove moves); print "\n")
       val _ = (print "movCount:\n"; showTabla (2, showTemp, Int.toString, movCount))
     in () end
 

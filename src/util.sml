@@ -24,17 +24,32 @@ structure util :> util = struct
   (* Genera un string con n espacios *)
   fun indent n = String.concat (List.tabulate (n, fn _ => " "))
 
-  (* Genera string para mostrar una lista de strings *)
-  fun showStrList l =
+  (* Genera un string a partir de una lista *)
+  fun listToStr f l =
     let
       fun aux [] = ""
         | aux [x] = x
-        | aux (x::xs) = x^", "^(aux xs)
-    in "["^(aux l)^"]" end;
+        | aux (x::xs) = x^", "^(aux xs) 
+    in
+      "["^(aux (List.map f l))^"]"
+    end
 
-  (* crea un nuevo set a partir de una lista de temporales *)
+  (* Genera un string a partir de un set *)
+  fun setToStr f s =
+    let
+      fun aux [] = ""
+        | aux [x] = x
+        | aux (x::xs) = x^", "^(aux xs) 
+    in
+      "{"^(aux (List.map f (listItems s)))^"}"
+    end
+
+  (* Crea un nuevo set a partir de una lista de temporales *)
   fun makeTempSet [] = empty String.compare
     | makeTempSet [t] = singleton String.compare t
     | makeTempSet ts = addList (empty String.compare, ts)
+
+  (* Función identidad de strings *)
+  fun id x = x
 
 end

@@ -111,8 +111,8 @@ parser.ui: ast.uo
 trans.uo: trans.ui temp.ui frame.ui ast.uo canon.ui treepp.ui tree.uo \
     stack.ui 
 typepp.ui: table.ui tentry.uo 
-regalloc.uo: regalloc.ui temp.ui frame.ui flow.ui assem.uo stack.ui \
-    liveness.ui 
+regalloc.uo: regalloc.ui table.ui temp.ui frame.ui flow.ui assem.uo \
+    stack.ui liveness.ui 
 interp.ui: temp.ui frame.ui tree.uo 
 liveness.uo: liveness.ui table.ui temp.ui graph.ui flow.ui assem.uo util.ui 
 topsort.uo: topsort.ui table.ui tentry.uo ast.uo util.ui 

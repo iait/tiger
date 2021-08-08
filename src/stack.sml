@@ -15,4 +15,6 @@ structure stack :> stack = struct
   fun topPila pila = 
         hd (!pila)
 
+  fun pilaToList pila = !pila
+
 end

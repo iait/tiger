@@ -11,10 +11,16 @@ signature util = sig
   (* Genera un string con n espacios *)
   val indent : int -> string
 
-  (* Genera string para mostrar una lista de strings *)
-  val showStrList : string list -> string
+  (* Genera un string a partir de una lista *)
+  val 'a listToStr : ('a -> string) -> 'a list -> string
 
-  (* crea un nuevo set a partir de una lista de temporales *)
+  (* Genera un string a partir de un set *)
+  val 'a setToStr : ('a -> string) -> 'a Splayset.set -> string
+
+  (* Crea un nuevo set a partir de una lista de temporales *)
   val makeTempSet : temp.temp list -> temp.temp Splayset.set
+
+  (* Función identidad *)
+  val 'a id : 'a -> 'a
 
 end

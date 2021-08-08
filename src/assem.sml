@@ -51,7 +51,7 @@ structure assem = struct
       in
         case instr of
           OPER {assem,dst,src,jmp} => 
-              "OPER ("^(speak saytemp assem dst src jmp)^") "^(showStrList jmp)
+              "OPER ("^(speak saytemp assem dst src jmp)^") "^(listToStr id jmp)
           | LAB {assem,lab} => 
               raise Fail "LAB"
           | MOV {assem,dst,src} => 

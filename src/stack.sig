@@ -9,4 +9,7 @@ signature stack = sig
   val popPila : 'a Pila -> unit
   val topPila : 'a Pila -> 'a
 
+  (* para debug *)
+  val pilaToList : 'a Pila -> 'a list
+
 end
