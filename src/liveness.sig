@@ -1,12 +1,14 @@
 signature liveness = sig
 
+  type move = temp.temp * temp.temp
+
   type interGraph = {
     adj: (temp.temp, temp.temp Splayset.set) table.Tabla,
     mov: (temp.temp, temp.temp Splayset.set) table.Tabla
   }
 
   (* Construye un grafo de interferencias a partir del control-flow graph *)
-  val flow2interGraph : flow.flowGraph -> interGraph
+  val flow2interGraph : flow.flowGraph -> interGraph * move list
 
   (* Crea una copia del grafo de interferencias *)
   val fromInterGraph : interGraph -> interGraph

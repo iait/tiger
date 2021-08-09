@@ -8,6 +8,8 @@ structure liveness :> liveness = struct
   open graph
   open assem
 
+  type move = temp.temp * temp.temp
+
   (* grafo de interferencias *)
   type interGraph = {
     adj: (temp, temp set) Tabla,
@@ -112,24 +114,27 @@ structure liveness :> liveness = struct
       val _ = List.app (fn t => tabMete (t, makeTempSet[], adj)) ts
       val _ = List.app (fn t => tabMete (t, makeTempSet[], mov)) ts
       (* función para calcular el grafo de interferencias *)
-      fun interference (n, OPER _) =
+      (* interference : (int * instr) * move list -> move list *)
+      fun interference ((n, OPER _), ms) =
             let
               val defs = listItems (tabSaca (n, def))
               val outs = listItems (tabSaca (n, liveOut))
+              val _ = List.app (fn a => List.app (fn b => addEdge adj (a, b)) outs) defs
             in
-              List.app (fn a => List.app (fn b => addEdge adj (a, b)) outs) defs
+              ms
             end
-        | interference (n, MOV {assem,dst,src}) =
+        | interference ((n, MOV {assem,dst,src}), ms) =
             let
               val outs = listItems (tabSaca (n, liveOut))
               val _ = addEdge mov (src, dst)
+              val _ = List.app (fn b => if b=src then () else addEdge adj (dst, b)) outs
             in
-              List.app (fn b => if b=src then () else addEdge adj (dst, b)) outs
+              (src,dst)::ms
             end
-        | interference (n, LAB _) = raise Fail "No debería llegar LAB"
-      val _ = List.app interference (tabAList nodes) 
+        | interference ((n, LAB _), ms) = raise Fail "No debería llegar LAB"
+      val ms = List.foldl interference [] (tabAList nodes)
     in
-      inter
+      (inter, ms)
     end
 
   (* imprime el grafo de interferencias para debug *)

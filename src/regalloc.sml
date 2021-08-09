@@ -10,8 +10,6 @@ structure regalloc :> regalloc = struct
   open stack
   open table
 
-  type move = temp * temp
-
   (* conjuntos de temporarios:
    *  low-degree non-move-related
    *  low-degree move-related
@@ -32,6 +30,9 @@ structure regalloc :> regalloc = struct
   (* toma un elemento del conjunto *)
   val take = Splayset.find (fn _ => true)
 
+  (* genera string para un move *)
+  fun showMove (t1,t2) = t2^"<-"^t1
+
   (* muestra el workspace para debug *)
   fun showWorkspace (ws : workspace) =
     let
@@ -43,8 +44,9 @@ structure regalloc :> regalloc = struct
       val _ = print ("high-degree: "^(setToStr id hd)^"\n")
 
       val _ = print ("selectStack: "^(listToStr id (pilaToList selectStack))^"\n")
-
     in () end
+
+  (* getMoves : (temp, temp set) Tabla -> move list *)
 
   (* build : instr list -> bool * bool -> workspace *)
   (* Construye el grafo de interferencias y el workspace inicial *)
@@ -54,13 +56,18 @@ structure regalloc :> regalloc = struct
       val fg = instrs2flowGraph instrs
       val _ = 
         if not flow then ()
-        else (print "Control-flow graph\n"; showFlowGraph fg; print "------------\n")
-      val (ig as {adj,mov}) = flow2interGraph fg
+        else (print "Control-flow graph\n"; 
+          showFlowGraph fg; 
+          print "-------------------------\n")
       (* genera el grafo de interferencias *)
-      val ig = flow2interGraph fg
+      val (ig, ms) = flow2interGraph fg
+      val {adj,mov} = ig
       val _ =
         if not inter then ()
-        else (print "Interference graph\n"; showInterGraph ig; print "------------\n")
+        else (print "Interference graph\n"; 
+          showInterGraph ig;
+          print ("moves: "^(listToStr showMove ms)^"\n");
+          print "-------------------------\n")
       (* clasifica los temps en low-degree, move-related, high-degree *)
       fun classify [] (ld, mr, hd) = (ld, mr, hd)
         | classify (t::ts) (ld, mr, hd) =
