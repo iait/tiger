@@ -13,20 +13,22 @@ structure flow :> flow = struct
     def: (node, temp set) Tabla,    (* temporarios definidos en cada nodo *)
     use: (node, temp set) Tabla,    (* temporarios utilizados en cada nodo *)
     isMove: (node, bool) Tabla,     (* si la intrucción es un move *)
-    nodes: (node, instr) Tabla     (* instrucciones para debug *)
+    nodes: (node, instr) Tabla,     (* instrucciones para debug *)
+    temps: (temp, unit) Tabla       (* todos los temporales *)
   }
 
   (* instrs2flowGraph : assem.instr list -> flowGraph *)
   fun instrs2flowGraph is =
     let
       (* inicializa el grafo *)
-      val fg as {control, def, use, isMove, nodes} : flowGraph =
+      val fg as {control, def, use, isMove, nodes, temps} : flowGraph =
       {
         control = newGraph(),
         def = tabNueva(),
         use = tabNueva(),
         isMove = tabNueva(),
-        nodes = tabNueva()
+        nodes = tabNueva(),
+        temps = tabNueva()
       }
       (* mapa que asocia los labels con los nodos *)
       val labelMap : (label, node) Tabla = tabNueva()
@@ -76,6 +78,8 @@ structure flow :> flow = struct
       fun makeEdges _ [] = ()
         | makeEdges prev ((n, OPER {assem,dst,src,jmp})::ns) =
             let
+              val _ = List.app (fn t => tabMete (t, (), temps)) dst
+              val _ = List.app (fn t => tabMete (t, (), temps)) src
               val _ = case prev of
                 NONE => ()
                 | SOME p => addEdge control (p, n)
@@ -85,6 +89,8 @@ structure flow :> flow = struct
             in makeEdges prev' ns end
         | makeEdges prev ((n, MOV {assem,dst,src})::ns) =
             let
+              val _ = tabMete (dst, (), temps)
+              val _ = tabMete (src, (), temps)
               val _ = case prev of
                 NONE => ()
                 | SOME p => addEdge control (p, n)
@@ -94,7 +100,7 @@ structure flow :> flow = struct
     in fg end
 
   (* imprime el control-flow graph para debug *)
-  fun showFlowGraph ({control,def,use,isMove,nodes} : flowGraph) =
+  fun showFlowGraph ({control,def,use,isMove,nodes,temps} : flowGraph) =
     let
       val showNode = Int.toString
       fun showTempSet s =
@@ -109,6 +115,7 @@ structure flow :> flow = struct
       val _ = (print "use:\n"; showTabla (2, showNode, showTempSet, use))
       val _ = (print "isMove:\n"; showTabla (2, showNode, Bool.toString, isMove))
       val _ = (print "nodes:\n"; showTabla (2, showNode, showInstr, nodes))
+      val _ = (print "temps: "; print (listToStr id (tabClaves temps)); print "\n")
     in () end 
 
 end

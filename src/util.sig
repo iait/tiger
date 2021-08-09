@@ -23,4 +23,7 @@ signature util = sig
   (* Función identidad *)
   val 'a id : 'a -> 'a
 
+  (* Reemplaza un elemento por otro en un conjunto *)
+  val 'a setReplace : ('a Splayset.set * 'a * 'a) -> 'a Splayset.set
+
 end

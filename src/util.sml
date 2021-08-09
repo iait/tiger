@@ -52,4 +52,7 @@ structure util :> util = struct
   (* Función identidad de strings *)
   fun id x = x
 
+  (* Reemplaza un elemento por otro en un conjunto *)
+  fun setReplace (s, a, b) = (retrieve (s, a); add (delete (s, a), b))
+
 end

@@ -13,25 +13,14 @@ structure regalloc :> regalloc = struct
   type move = temp * temp
 
   (* conjuntos de temporarios:
-   * low-degree non-move-related
-   * low-degree move-related
-   * high-degree *)
+   *  low-degree non-move-related
+   *  low-degree move-related
+   *  high-degree *)
   type tempSets = temp set * temp set * temp set
 
   type workspace = {
     inter: interGraph,           (* grafo de interferencias *)
     tempSets: tempSets
-    
-    (*
-    spilledTemps: temp list,     (* enviados a memoria *)
-    coalescedTemps: temp list,   (* uno de los temp fusionados *)
-    
-    coalescedMoves: move list,   (* fusionados *)
-    constrainedMoves: move list, (* origen y destino interfiriendo *)
-    frozenMoves: move list,      (* no considerados para fusionar *)
-    worklistMoves: move list,    (* los que podrían ser fusionados *)
-    activeMoves: move list       (* todavía no listos para fusionar *)
-    *)
   }
 
   (* pila de temps que vamos sacando del grafo de interferencias *)
@@ -55,17 +44,6 @@ structure regalloc :> regalloc = struct
 
       val _ = print ("selectStack: "^(listToStr id (pilaToList selectStack))^"\n")
 
-      (*
-      val _ = print ("spilledTemps: "^(listToStr id (#spilledTemps ws))^"\n")
-      val _ = print ("coalescedTemps: "^(listToStr id (#coalescedTemps ws))^"\n")
-
-      fun movToStr (a,b) = b^"<-"^a
-      val _ = print ("coalescedMoves: "^(listToStr movToStr (#coalescedMoves ws))^"\n")
-      val _ = print ("constrainedMoves: "^(listToStr movToStr (#constrainedMoves ws))^"\n")
-      val _ = print ("frozenMoves: "^(listToStr movToStr (#frozenMoves ws))^"\n")
-      val _ = print ("worklistMoves: "^(listToStr movToStr (#worklistMoves ws))^"\n")
-      val _ = print ("activeMoves: "^(listToStr movToStr (#activeMoves ws))^"\n")
-      *)
     in () end
 
   (* build : instr list -> bool * bool -> workspace *)
@@ -77,7 +55,7 @@ structure regalloc :> regalloc = struct
       val _ = 
         if not flow then ()
         else (print "Control-flow graph\n"; showFlowGraph fg; print "------------\n")
-      val (ig as {adj,moves,movCount}) = flow2interGraph fg
+      val (ig as {adj,mov}) = flow2interGraph fg
       (* genera el grafo de interferencias *)
       val ig = flow2interGraph fg
       val _ =
@@ -88,13 +66,13 @@ structure regalloc :> regalloc = struct
         | classify (t::ts) (ld, mr, hd) =
             let
               val degree = numItems (tabSaca (t, adj))
-              val movs = (tabSaca (t, movCount)) handle noExiste => 0
+              val moveRelated = numItems (tabSaca (t, mov)) > 0
             in
               if degree < K then 
-                if movs = 0 then
-                  classify ts (t::ld, mr, hd)
-                else
+                if moveRelated then
                   classify ts (ld, t::mr, hd)
+                else
+                  classify ts (t::ld, mr, hd)
               else
                 classify ts (ld, mr, t::hd)
             end
@@ -102,29 +80,19 @@ structure regalloc :> regalloc = struct
     in
       {
         inter = ig,
-        
         tempSets = (makeTempSet ld, makeTempSet mr, makeTempSet hd)
-        
-        (*
-        spilledTemps = [],
-        coalescedTemps = [],
-        
-        coalescedMoves = [],
-        constrainedMoves = [],
-        frozenMoves = [],
-        worklistMoves = [],
-        activeMoves = moves
-        *)
       }
     end
+
+(* refactorizar
 
   (* Elimina un nodo low-degree non-move-related.
    * Lo saca del grafo de interferencias y del tempSets, y lo añade al selectStack.
    * Se reubica a cada vecino del nodo que pase de high-degree a low-degree. *)
-  fun simplifyTemp t {inter,tempSets=(ld, mr, hd)} =
+  fun simplifyTemp t {inter={adj,mov}, tempSets=(ld, mr, hd)} =
     let
       (* elimina el nodo del grafo *)
-      val inter' = removeNode inter t
+      val inter' = removeNode adj t
       (* mete el temporal t a la pila *)
       val _ = pushPila selectStack t
       (* reclasifica el nodo n vecino de t *)
@@ -155,38 +123,66 @@ structure regalloc :> regalloc = struct
       NONE => ws
       | SOME t => simplify (simplifyTemp t ws)
 
+  (**)
+  fun coalesceMov (t1, t2) rs (ws as {inter,tempSets}) =
+    let
+      val {adj,moves,movCount} = inter
+      val adj1 = tabSaca (t1, adj)
+      val adj2 = tabSaca (t2, adj)
+      (* elimina el temporario t2 *)
+      val (inter' as {adj',moves',movCount'}) = removeNode inter t2
+      (* agrega los vecinos de t2 a los vecinos de t1 *)
+      val _ = tabMete (t1, union (adj1, adj2), adj')
+      (* en el conjunto de adyacencias de cada vecino de t2 reemplaza t2 por t1 *)
+      fun replace n = tabMete (n, setReplace (tabSaca (n, adj'), t2, t1), adj')
+      val _ = Splayset.app remplace adj2
+    (* agregar a adj1 adj2
+       a cada n in adj2 reemplazar t2 por t1
+       eliminar t2
+       agregar alias t2 -> t1 *)
+    (* recalcular los tempSets *)
+
+  (* Busca y fusiona dos temporarios de un mov, retornando el ws nuevo.
+   * En caso de que no pueda hacerse, retorna NONE. *)
+  fun coalesce (ws as {inter,tempSets}) =
+    let
+      val {adj,moves,movCount} = inter
+      (* verifica si el mov se puede fusionar con Briggs *)
+      fun briggs (t1,t2) =
+        let
+          val adj1 = tabSaca (t1, adj)
+          val adj2 = tabSaca (t2, adj)
+          val intersec = intersection adj1 adj2
+          fun degree n = 
+            if member (intersec, n) then (numItems (tabSaca (n, adj))) - 1
+            else numItems (tabSaca (n, adj))
+          val adjs = List.filter (fn n => degree >= K) (itemList (union (adj1, adj2)))
+        in
+          length adjs < K
+        end
+      (* devuelve un mov que sea seguro fusionar *)
+      fun findMov [] rs = NONE
+        | findMov ((t1,t2)::ms) rs =
+            if not (member (tabSaca (t1, adj), t2) andalso briggs (t1,t2) then
+              SOME ((t1,t2), rs @ ms)
+            else findMov ms ((t1,t2)::rs)
+      (* busca un mov para fusionar *)
+      in
+        case findMov moves of
+          NONE => NONE
+          | SOME (m, rs) => coalesceMov m rs ws
+      end
+
+*)
+
   fun regalloc (flow, inter) frame instrs =
     let
       val ws = build (flow, inter) instrs
       val _ = showWorkspace ws
+      (*
       val ws' = simplify ws
       val _ = showWorkspace ws'
-
-      (* TODO continuar *)
-      
-(***** Main *****)
-(*
-      fun main() =
-        let
-          val _ = liveAnalysis()
-          val _ = build()
-          val _ = makeWorkList()
-          fun iter() = 
-            if not (isEmpty simplifySet) then (simplify(); iter())
-            else if not (isEmpty workListMoves) then (coalesce(); iter())
-            else if not (isEmpty freezeSet) then (freeze(); iter())
-            else if not (isEmpty spillSet) then (selectSpill(); iter())
-            else ()
-          val _ = iter()
-          val _ = assignColors()
-        in
-          if not (isEmpty spilledList) 
-            then (rewriteProgram spilledList; main())
-            else ()
-        end
-      
-      and build() = ()
-*)
+      *)
       
     in
       (instrs, fn s => s)
