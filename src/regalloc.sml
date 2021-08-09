@@ -18,11 +18,15 @@ structure regalloc :> regalloc = struct
 
   type workspace = {
     inter: interGraph,           (* grafo de interferencias *)
-    tempSets: tempSets
+    tempSets: tempSets,
+    moves: move list
   }
 
   (* pila de temps que vamos sacando del grafo de interferencias *)
   val selectStack: temp Pila = nuevaPila()
+
+  (* pila de subgrafos de interferencia *)
+  val graphStack: interGraph Pila = nuevaPila()
 
   (* cantidad de colores *)
   val K = List.length machineRegs
@@ -87,26 +91,29 @@ structure regalloc :> regalloc = struct
     in
       {
         inter = ig,
-        tempSets = (makeTempSet ld, makeTempSet mr, makeTempSet hd)
+        tempSets = (makeTempSet ld, makeTempSet mr, makeTempSet hd),
+        moves = ms
       }
     end
-
-(* refactorizar
 
   (* Elimina un nodo low-degree non-move-related.
    * Lo saca del grafo de interferencias y del tempSets, y lo añade al selectStack.
    * Se reubica a cada vecino del nodo que pase de high-degree a low-degree. *)
-  fun simplifyTemp t {inter={adj,mov}, tempSets=(ld, mr, hd)} =
+  fun simplifyTemp t {inter, tempSets=(ld, mr, hd), moves} =
     let
+      (* crea una copia del grafo *)
+      val inter' as {adj,mov} = fromInterGraph inter
       (* elimina el nodo del grafo *)
-      val inter' = removeNode adj t
-      (* mete el temporal t a la pila *)
+      val _ = removeNodeWithEdges adj t
+      val _ = removeNode mov t
+      (* mete el temporal t a la pila y el grafo original *)
       val _ = pushPila selectStack t
+      val _ = pushPila graphStack inter
       (* reclasifica el nodo n vecino de t *)
       fun reclassify (n, (ld, mr, hd)) =
         let
-          val degree = numItems (tabSaca (n, #adj inter'))
-          val movs = (tabSaca (t, #movCount inter')) handle noExiste => 0
+          val degree = numItems (tabSaca (n, adj))
+          val movs = numItems (tabSaca (n, mov))
         in
           if degree = K-1 then
             if movs = 0 then
@@ -116,44 +123,42 @@ structure regalloc :> regalloc = struct
           else
             (ld, mr, hd)
         end
-      (* reclasifica todos los vecinos de t *)
+      (* reclasifica todos los vecinos originales de t *)
       val neighbors = tabSaca (t, #adj inter)
       val tempSets' = Splayset.foldl reclassify (delete (ld, t), mr, hd) neighbors
     in
-      {inter = inter', tempSets = tempSets'}
+      {inter=inter', tempSets=tempSets', moves=moves}
     end
 
   (* simplify : workspace -> workspace *)
   (* simplifica los nodos low-degree non-move-related hasta que no quede ninguno *)
-  fun simplify (ws as {inter,tempSets=(ld, mr, hd)}) =
+  fun simplify (ws as {inter,tempSets=(ld, mr, hd),moves}) =
     case take ld of
       NONE => ws
       | SOME t => simplify (simplifyTemp t ws)
 
-  (**)
-  fun coalesceMov (t1, t2) rs (ws as {inter,tempSets}) =
+  (* Fusiona un mov *)
+  fun coalesceMov (t1, t2) rs (ws as {inter,tempSets,moves}) =
     let
-      val {adj,moves,movCount} = inter
-      val adj1 = tabSaca (t1, adj)
+      (* crea una copia del grafo *)
+      val inter' as {adj,mov} = fromInterGraph inter
+      (* cada vecino de t2 ahora será vecino de t1 *)
       val adj2 = tabSaca (t2, adj)
+      val _ = Splayset.app (fn n => addEdge adj (n, t1)) adj2
       (* elimina el temporario t2 *)
-      val (inter' as {adj',moves',movCount'}) = removeNode inter t2
-      (* agrega los vecinos de t2 a los vecinos de t1 *)
-      val _ = tabMete (t1, union (adj1, adj2), adj')
-      (* en el conjunto de adyacencias de cada vecino de t2 reemplaza t2 por t1 *)
-      fun replace n = tabMete (n, setReplace (tabSaca (n, adj'), t2, t1), adj')
-      val _ = Splayset.app remplace adj2
-    (* agregar a adj1 adj2
-       a cada n in adj2 reemplazar t2 por t1
-       eliminar t2
-       agregar alias t2 -> t1 *)
-    (* recalcular los tempSets *)
+      val _ = removeNodeWithEdges adj t2
+      (* TODO agregar a t1 como alias de t2 *)
+      (* los temps adyacentes a t1 y a t2 disminuirán en 1 su grado *)
+      (* el nodo resultante t1 puede dejar de ser move-related *)
+    in
+      {inter=inter', tempSets=tempSets, moves=rs}
+    end
 
   (* Busca y fusiona dos temporarios de un mov, retornando el ws nuevo.
    * En caso de que no pueda hacerse, retorna NONE. *)
-  fun coalesce (ws as {inter,tempSets}) =
+  fun coalesce (ws as {inter,tempSets,moves}) =
     let
-      val {adj,moves,movCount} = inter
+      val {adj,mov} = inter
       (* verifica si el mov se puede fusionar con Briggs *)
       fun briggs (t1,t2) =
         let
@@ -173,23 +178,19 @@ structure regalloc :> regalloc = struct
             if not (member (tabSaca (t1, adj), t2) andalso briggs (t1,t2) then
               SOME ((t1,t2), rs @ ms)
             else findMov ms ((t1,t2)::rs)
-      (* busca un mov para fusionar *)
-      in
-        case findMov moves of
-          NONE => NONE
-          | SOME (m, rs) => coalesceMov m rs ws
-      end
+    in
+      case findMov moves of
+        NONE => NONE
+        | SOME (m, rs) => coalesceMov m rs ws
+    end
 
-*)
-
+  (* Asignación de registros *)
   fun regalloc (flow, inter) frame instrs =
     let
       val ws = build (flow, inter) instrs
       val _ = showWorkspace ws
-      (*
       val ws' = simplify ws
       val _ = showWorkspace ws'
-      *)
       
     in
       (instrs, fn s => s)

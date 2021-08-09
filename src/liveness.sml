@@ -53,6 +53,11 @@ structure liveness :> liveness = struct
     else
       (tabElimina (t, adj); ())
 
+  (* Elimina un nodo junto con todas sus aristas *)
+  fun removeNodeWithEdges adj t = (
+    Splayset.app (fn n => removeEdge adj (n,t)) (tabSaca (t, adj));
+    removeNode adj t)
+
   (* mapas con los liveIn y liveOut de cada nodo *)
   type liveMaps = {
     liveIn: (node, temp set) Tabla,
