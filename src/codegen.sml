@@ -228,8 +228,8 @@ structure codegen :> codegen = struct
   (* originalCodegen : frame.frame -> tree.stm -> assem.instr list *)
   fun originalCodegen frame stm = (munchStm stm; rev (!ilist))
 
-  (* codegen : (bool * bool) -> (stm list * frame) -> unit *)
-  fun codegen (flow, inter) (stms, frame) =
+  (* codegen : bool -> (stm list * frame) -> unit *)
+  fun codegen alloc (stms, frame) =
     let
       val _ = ilist := []
       (*val DEBUG = 
@@ -237,7 +237,7 @@ structure codegen :> codegen = struct
       val _ = List.app munchStm stms
       val instrs = rev (!ilist)
       (* calcula la asignación de registros *)
-      val (is, saytemp) = regalloc (flow, inter) frame instrs
+      val (is, saytemp) = regalloc alloc frame instrs
     in
       print ((name frame)^":\n");
       List.app (print o (format saytemp)) is 

@@ -4,12 +4,13 @@ signature stack = sig
 
   val nuevaPila : unit -> 'a Pila
   val nuevaPila1 : 'a -> 'a Pila
+  val nuevaPilaList : 'a list -> 'a Pila
 
   val pushPila : 'a Pila -> 'a -> unit
   val popPila : 'a Pila -> unit
   val topPila : 'a Pila -> 'a
+  val retrievePila : 'a Pila -> 'a
 
-  (* para debug *)
   val pilaToList : 'a Pila -> 'a list
 
 end

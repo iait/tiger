@@ -6,6 +6,8 @@ structure stack :> stack = struct
 
   fun nuevaPila1 item = ref [item]
 
+  fun nuevaPilaList items = ref items
+
   fun pushPila pila item = 
         pila := (item::(!pila))
 
@@ -14,6 +16,14 @@ structure stack :> stack = struct
 
   fun topPila pila = 
         hd (!pila)
+
+  fun retrievePila pila = 
+    let
+      val v = topPila pila
+      val _ = popPila pila
+    in
+      v
+    end
 
   fun pilaToList pila = !pila
 
