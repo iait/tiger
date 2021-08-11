@@ -13,4 +13,6 @@ signature stack = sig
 
   val pilaToList : 'a Pila -> 'a list
 
+  val fold : ('a * 'b -> 'b) -> 'b -> 'a Pila -> 'b
+
 end

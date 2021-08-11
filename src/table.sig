@@ -82,6 +82,9 @@ signature table = sig
   (* Compara por igualdad dos tablas *)
   val tabIguales : ('b * 'b -> bool) -> ((''a, 'b) Tabla * (''a, 'b) Tabla) -> bool
 
+  (* Consume el contenido de la tabla, dejándola vacía *)
+  val tabConsume : ('a * 'b -> unit) -> ('a, 'b) Tabla -> unit
+
   (* Imprime el contenido de la tabla para debug *)
   val showTabla : int * ('a -> string) * ('b -> string) * ('a, 'b) Tabla -> unit
 

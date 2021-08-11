@@ -55,4 +55,7 @@ structure util :> util = struct
   (* Reemplaza un elemento por otro en un conjunto *)
   fun setReplace (s, a, b) = (retrieve (s, a); add (delete (s, a), b))
 
+  (* Indica si un elemento no está en el conjunto *)
+  val notIn = not o member
+
 end

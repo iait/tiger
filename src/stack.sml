@@ -27,4 +27,12 @@ structure stack :> stack = struct
 
   fun pilaToList pila = !pila
 
+  fun fold f i pila =
+    let
+      val l = !pila
+      val _ = pila := []
+    in
+      foldl f i (!pila)
+    end 
+
 end

@@ -100,6 +100,9 @@ structure table :> table = struct
       aux (tabAList t1)
     end
 
+  (* Consume el contenido de la tabla, dejándola vacía *)
+  fun tabConsume f t = List.app (fn (k, _) => f (k, remove t k)) (listItems t)
+
   (* imprime el contenido de la tabla para debug *)
   fun showTabla (n, showKey, showValue, t) =
     let
