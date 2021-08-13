@@ -1,0 +1,11 @@
+/* ejemplo con variables */
+/* $ ./tiger -arbol -ir -canon -alloc test/example04.tig */
+let
+  var x:string := "hola"
+  var y := "mundo"
+  var a := 1
+  var b := 0
+in
+  if x=y then a else b
+end
+

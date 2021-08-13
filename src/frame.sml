@@ -121,9 +121,9 @@ structure frame :> frame = struct
         in
           aux (explode s)
         end
-      val len = "  .quad " ^ makestring (stringLen s)
-      val str = "  .ascii \""^s^"\""
-      val value = label^":\n"^len^"\n"^str^"\n"
+      val len = "  .quad "^(makestring (stringLen s))^"\n"
+      val str = "  .ascii \""^s^"\"\n"
+      val value = len^str
     in
       STRING (label, value)
     end

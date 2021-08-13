@@ -65,7 +65,7 @@ structure regalloc :> regalloc = struct
 
   (* Arma la función de coloreo a partir de una tabla *)
   (* makeAlloc : (temp, string) Tabla -> allocation *)
-  fun makeAlloc table = fn t => tabSaca (t, table)
+  fun makeAlloc table = fn t => "%"^(tabSaca (t, table))
 
   (* Elimina de ms todos los move relacionados al nodo t *)
   fun filterMoves t ms = List.filter (fn (t1,t2) => t1<>t andalso t2<>t) ms
@@ -81,7 +81,7 @@ structure regalloc :> regalloc = struct
       (* elimina el nodo del grafo *)
       val _ = removeNodeWithEdges adj t
       val _ = removeNode mov t
-      (* mete el temporal t a la pila y el grafo original *)
+      (* mete el temporal t su lista de adyacentes a la pila *)
       val _ = pushPila selectStack (t, adjs)
       (* debug *)
       val _ = printInterGraph (ig, ms)
@@ -123,6 +123,7 @@ structure regalloc :> regalloc = struct
   (* freezeTemp : temp -> interGraph * move list -> move list *)
   fun freezeTemp t (ig as {adj,mov}, ms) =
     let
+      val _ = printDebug ("## freezing "^t^" ##\n")
       (* elimina las aristas en el grafo de mov *)
       val _ = Splayset.app (fn n => removeEdge mov (t,n)) (tabSaca (t,mov))
       (* elimina de ms todos los move relacionados al nodo t *)
@@ -138,11 +139,16 @@ structure regalloc :> regalloc = struct
   (* spillTemp : temp -> interGraph * move list -> move list *)
   fun spillTemp t (ig as {adj,mov}, ms) =
     let
+      val _ = printDebug ("## spilling "^t^" ##\n")
+      (* vecinos de t *)
+      val adjs = tabSaca (t, adj)
       (* elimina el nodo de los grafos adj y mov *)
       val _ = removeNodeWithEdges adj t
       val _ = removeNodeWithEdges mov t
       (* elimina de ms todos los move relacionados al nodo t *)
       val ms' = filterMoves t ms
+      (* mete el temporal t su lista de adyacentes a la pila *)
+      val _ = pushPila selectStack (t, adjs)
       (* debug *)
       val _ = printInterGraph (ig, ms')
     in
@@ -237,7 +243,7 @@ structure regalloc :> regalloc = struct
                 end
         in
           case findSpill (tabClaves adj) (NONE, 0) of
-            NONE => () (* solo quedan nodos precoloreados *)
+            NONE => print "finish!\n" (* solo quedan nodos precoloreados *)
             | SOME t => simplify (spillTemp t (ig, ms))
         end
 
@@ -273,17 +279,35 @@ structure regalloc :> regalloc = struct
       (* select : instr list -> instr list * allocation *)
       and select instrs =
         let
+          val _ = printDebug "Select\n"
           val alloc : (temp, string) Tabla = tabNueva()
           val _ = Splayset.app (fn r => tabMete (r, r, alloc)) precolored
-          val _ = List.app (fn (t,ns) => tabMete (t, t, alloc)) (pilaToList selectStack)
-          val _ = List.app (fn (t,a) => tabMete (t, tabSaca (a, alloc), alloc)) (tabAList alias)
-          (* TODO *)
-          val spilled = []
+          (* asigna color a un temp distinto al de sus vecinos *)
+          fun color ((t, adjs), spilled) =
+            let
+              val _ = printDebug ("## coloring "^t^" ##\n")
+              val neighbors = difference (adjs, spilled)
+              val _ = printDebug ("neighbors: "^(setToStr id adjs)^"\n")
+              val usedColors =
+                makeTempSet (List.map (fn t => tabSaca (t,alloc)) (listItems neighbors))
+            in
+              case Splayset.find (fn c => notIn (usedColors, c)) precolored of
+                NONE => (printDebug "spilled!\n"; add (spilled, t))
+                | SOME c => (printDebug ("color: "^c^"\n"); tabMete (t, c, alloc); spilled)
+            end
+          (* colorea los nodos del stack *)
+          val spilled = fold color (makeTempSet[]) selectStack
+          (* asigna el color de su alias a los nodos fusionados *)
+          val _ = tabConsume (fn (t,a) => tabMete (t, tabSaca (a, alloc), alloc)) alias
+          (* resultado de select para debug *)
+          val _ = printDebug "allocation:\n"
+          val _ = if !debug then showTabla (2, id, id, alloc) else ()
+          val _ = printDebug ("spilled: "^(setToStr id spilled)^"\n")
         in
-          if spilled = [] then
+          if isEmpty spilled then
             (instrs, makeAlloc alloc)
           else
-            rewrite spilled instrs
+            rewrite (listItems spilled) instrs
         end
 
       (* Reescribe el programa volcando a memoria los temporarios spilled *)
@@ -292,6 +316,7 @@ structure regalloc :> regalloc = struct
         let
           (* TODO *)
           val instrs' = instrs
+          val _ = raise Fail "Rewrite todavía no implementado!"
         in
           build instrs'
         end

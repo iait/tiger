@@ -66,11 +66,10 @@ structure assem = struct
       | format saytemp (LAB {assem, lab}) =
           assem^"\n"
       | format saytemp (MOV {assem, dst, src}) =
-          "  "^(speak saytemp assem [dst] [src] [])^"\n"
+          if (saytemp dst)=(saytemp src) then ""
+          else "  "^(speak saytemp assem [dst] [src] [])^"\n"
 
   end
-
-
 
 end
 

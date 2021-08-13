@@ -328,13 +328,12 @@ structure seman :> seman = struct
             let
               (* Recibe declaración, entorno de valores y tipos, y lista de expresiones.
                * Retorna entornos aumentados por transDec y crea una nueva lista de 
-               * expresiones con las anteriores y las nuevas. 
-               *)
+               * expresiones con las anteriores y las nuevas. *)
               fun aux (dec, (venv, tenv, exps)) = 
                 let
                   val (venv', tenv', exps') = transDec (venv, tenv) dec
                 in
-                  (venv', tenv', exps' @ exps)
+                  (venv', tenv', exps @ exps')
                 end
               val (venv', tenv', expdecs) = List.foldl aux (venv, tenv, []) decs
               val {exp=expbody, ty=tybody} = transExp (venv', tenv') body

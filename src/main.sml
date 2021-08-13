@@ -10,6 +10,7 @@ open trans
 open interp
 open codegen
 open assem
+open util
 
 (* lexstream : instream -> lexbuf *)
 fun lexstream (is: instream) =
@@ -67,6 +68,7 @@ fun main args =
     (* interpreta código intermedio canonizado *)
     val _ = if inter then interpret true ps ss else ()
     (* genera assembler de los procedimientos *)
+    val DEBUG = List.app (fn (l,s) => print (l^":\n"^s)) ss
     val _ = List.app (codegen alloc) ps
   in
     print "----Fin de la compilación\n"

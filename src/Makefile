@@ -94,7 +94,7 @@ escape.ui: ast.uo
 ventry.uo: table.ui trans.ui tentry.uo temp.ui ast.uo 
 astpp.ui: ast.uo 
 main.uo: parser.ui trans.ui interp.ui codegen.ui astpp.ui seman.ui lexer.uo \
-    line.uo frame.ui error.uo ast.uo assem.uo tree.uo escape.ui 
+    line.uo frame.ui error.uo ast.uo assem.uo tree.uo util.ui escape.ui 
 typepp.uo: typepp.ui table.ui tentry.uo 
 seman.ui: ast.uo 
 util.ui: temp.ui ast.uo 

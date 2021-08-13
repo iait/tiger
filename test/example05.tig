@@ -1,0 +1,17 @@
+/* Ejemplo que necesitará enviar variables a memoria */
+/* $ ./tiger -arbol -ir -canon -alloc test/example05.tig */
+let
+  var a := 1
+  var b := 2
+  var c := 3
+  var d := 4
+  var e := 5
+  var f := 6
+  /* las 6 variables se usan después de la llamada a función por lo
+   * que deberán ir a registros calle-save, pero solo hay 5 de estos */
+  var cmp := "hola"="mundo" /* esto genera una llamada a función */
+  var res := a+b+c+d+e+f
+in
+  if cmp then 0 else res
+end
+

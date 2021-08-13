@@ -127,7 +127,7 @@ structure codegen :> codegen = struct
           val src = munchArgs args frame.argRegs
         in
           emitOper ("call "^f) src frame.callerSave;
-          emitOper ("movq `s0, `d0") [rv] [t]
+          if t=rv then () else emit (MOV {assem="movq `s0, `d0", dst=t, src=rv})
         end
     | munchStm (MOVE (TEMP t, CALL _)) =
         raise Fail "no debería existir este tipo de call a función"
@@ -160,6 +160,9 @@ structure codegen :> codegen = struct
           emitOper ("movq $"^l^", `d0") [] [t]
       | CONST n =>
           emitOper ("movq $"^(fmt n)^", `d0") [] [t]
+      | TEMP u =>
+          if t=u then ()
+          else emit (MOV {assem="movq `s0, `d0", src=u, dst=t})
       | _ =>
           emit (MOV {assem="movq `s0, `d0", src=munchExp e, dst=t}))
     
@@ -232,10 +235,15 @@ structure codegen :> codegen = struct
   fun codegen alloc (stms, frame) =
     let
       val _ = ilist := []
-      (*val DEBUG = 
-        print ("cantidad de stms: "^((Int.toString o List.length) stms)^"\n")*)
       val _ = List.app munchStm stms
       val instrs = rev (!ilist)
+      (* imprime las instrucciones antes de la asignación de registros *)
+      val _ =
+        if alloc then
+          (print "Instrucciones originales\n";
+          print ((name frame)^":\n");
+          List.app (print o (format id)) instrs)
+        else ()
       (* calcula la asignación de registros *)
       val (is, saytemp) = regalloc alloc frame instrs
     in

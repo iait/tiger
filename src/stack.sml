@@ -32,7 +32,7 @@ structure stack :> stack = struct
       val l = !pila
       val _ = pila := []
     in
-      foldl f i (!pila)
+      foldl f i l
     end 
 
 end

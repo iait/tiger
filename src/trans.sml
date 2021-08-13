@@ -118,8 +118,8 @@ structure trans :> trans = struct
       (* printFrag : frag -> unit *)
       fun printFrag (PROC {body, frame}) = printStms body
         | printFrag (STRING (l, "")) = print (l^":\n")
-        | printFrag (STRING ("", s)) = print ("\t"^s^"\n")
-        | printFrag (STRING (l, s)) = print (l^":\t"^s^"\n")
+        | printFrag (STRING ("", s)) = print s
+        | printFrag (STRING (l, s)) = print (l^":\n"^s)
 
       (* aux : frag list -> unit *)
       fun aux [] _ = ()

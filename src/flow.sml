@@ -35,9 +35,10 @@ structure flow :> flow = struct
       (* asocia el nodo con todos los labels de la lista *)
       fun insertNodeLabels n ls = List.app (fn l => tabMete (l, n, labelMap)) ls
       (* añade las instrucciones como nodos al grafo *)
-      (* recibe los labels que definen la próxima instrucción y la lista de instrucciones *)
-      fun makeNodes ls [] = ls
-        | makeNodes ls ((i as OPER {assem,dst,src,jmp})::is) =
+      (* recibe los labels que definen la próxima instrucción y la lista de instrucciones,
+       * va creando los nodos y acumulandolos en la tercer lista *)
+      fun makeNodes ls [] ns = (ls, ns)
+        | makeNodes ls ((i as OPER {assem,dst,src,jmp})::is) ns =
             let
               val n = addNewNode control
               val _ = tabMete (n, makeTempSet dst, def)
@@ -45,9 +46,9 @@ structure flow :> flow = struct
               val _ = tabMete (n, false, isMove)
               val _ = tabMete (n, i, nodes)
               val _ = insertNodeLabels n ls
-            in makeNodes [] is end
-        | makeNodes ls (LAB {assem,lab}::is) = makeNodes (lab::ls) is
-        | makeNodes ls ((i as MOV {assem,dst,src})::is) =
+            in makeNodes [] is (n::ns) end
+        | makeNodes ls (LAB {assem,lab}::is) ns = makeNodes (lab::ls) is ns
+        | makeNodes ls ((i as MOV {assem,dst,src})::is) ns =
             let
               val n = addNewNode control
               val _ = tabMete (n, makeTempSet [dst], def)
@@ -55,7 +56,7 @@ structure flow :> flow = struct
               val _ = tabMete (n, true, isMove)
               val _ = tabMete (n, i, nodes)
               val _ = insertNodeLabels n ls
-            in makeNodes [] is end
+            in makeNodes [] is (n::ns) end
       (* nodo inicial *)
       val startNode = addNewNode control (* TODO completar def *)
       val _ = tabMete (startNode, makeTempSet [], def)
@@ -63,7 +64,7 @@ structure flow :> flow = struct
       val _ = tabMete (startNode, false, isMove)
       val _ = tabMete (startNode, OPER {assem="",dst=[],src=[],jmp=[]}, nodes)
       (* crea los nodos y llena el mapa de labels *)
-      val ls = makeNodes [] is
+      val (ls, ns) = makeNodes [] is [startNode]
       (* nodo final *)
       val endNode = addNewNode control (* TODO completar use *)
       val _ = tabMete (endNode, makeTempSet [], def)
@@ -76,27 +77,29 @@ structure flow :> flow = struct
       fun addNodeLabelEdge n l = addEdge control (n, tabSaca (l, labelMap))
       (* completa las aristas *)
       fun makeEdges _ [] = ()
-        | makeEdges prev ((n, OPER {assem,dst,src,jmp})::ns) =
-            let
-              val _ = List.app (fn t => tabMete (t, (), temps)) dst
-              val _ = List.app (fn t => tabMete (t, (), temps)) src
-              val _ = case prev of
-                NONE => ()
-                | SOME p => addEdge control (p, n)
-              val prev' = case jmp of
-                [] => SOME n
-                | _ => (List.app (addNodeLabelEdge n) jmp; NONE)
-            in makeEdges prev' ns end
-        | makeEdges prev ((n, MOV {assem,dst,src})::ns) =
-            let
-              val _ = tabMete (dst, (), temps)
-              val _ = tabMete (src, (), temps)
-              val _ = case prev of
-                NONE => ()
-                | SOME p => addEdge control (p, n)
-            in makeEdges (SOME n) ns end
-        | makeEdges _ _ = raise Fail "no debería llegar LAB"
-      val _ = makeEdges NONE (tabAList nodes)
+        | makeEdges prev (n::ns) =
+        case tabSaca (n, nodes) of
+            OPER {assem,dst,src,jmp} =>
+              let
+                val _ = List.app (fn t => tabMete (t, (), temps)) dst
+                val _ = List.app (fn t => tabMete (t, (), temps)) src
+                val _ = case prev of
+                  NONE => ()
+                  | SOME p => addEdge control (p, n)
+                val prev' = case jmp of
+                  [] => SOME n
+                  | _ => (List.app (addNodeLabelEdge n) jmp; NONE)
+              in makeEdges prev' ns end
+          | MOV {assem,dst,src} =>
+              let
+                val _ = tabMete (dst, (), temps)
+                val _ = tabMete (src, (), temps)
+                val _ = case prev of
+                  NONE => ()
+                  | SOME p => addEdge control (p, n)
+              in makeEdges (SOME n) ns end
+          | LAB {assem,lab} => raise Fail "no debería llegar LAB"
+      val _ = makeEdges NONE (rev (endNode::ns))
     in fg end
 
   (* imprime el control-flow graph para debug *)
