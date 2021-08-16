@@ -15,11 +15,11 @@ structure regalloc :> regalloc = struct
   (* bandera para debug *)
   val debug = ref false
 
-  (* pila de temps que vamos sacando del grafo de interferencias *)
-  val selectStack: (temp * temp set) Pila = nuevaPila()
+  (* ítem del selectStack *)
+  type selectItem = {temp: temp, adjs: temp set, alias: temp option}
 
-  (* mapa con los alias de los temps que se van fusionando *)
-  val alias: (temp, temp) Tabla = tabNueva()
+  (* pila de temps que vamos sacando del grafo de interferencias *)
+  val selectStack: selectItem Pila = nuevaPila()
 
   (* cantidad de colores *)
   val K = List.length machineRegs
@@ -33,15 +33,15 @@ structure regalloc :> regalloc = struct
   (* imprime el stack de select para debug *)
   fun showSelectStack() =
     let
-      fun showSelectTemp (temp,neighbors) =
+      fun showSelectItem {temp,adjs,alias} =
         (print "  ";
         print ("temp: "^temp^", ");
-        print ("neighbors: "^(setToStr id neighbors)^"\n"))
+        case alias of
+          SOME a => print ("alias: "^a^"\n")
+          | NONE => print ("adjs: "^(setToStr id adjs)^"\n"))
     in
       print ("selectStack: \n");
-      List.app showSelectTemp (pilaToList selectStack);
-      print ("alias: \n");
-      showTabla (2, id, id, alias)
+      List.app showSelectItem (pilaToList selectStack)
     end
 
   (* imprime grafo de interferencias si está la bandera de debug activada *)
@@ -66,8 +66,8 @@ structure regalloc :> regalloc = struct
   fun printDebug msg = if !debug then print msg else ()
 
   (* Arma la función de coloreo a partir de una tabla *)
-  (* makeAlloc : (temp, string) Tabla -> allocation *)
-  fun makeAlloc table = fn t => "%"^(tabSaca (t, table))
+  (* makeAlloc : (temp, string option) Tabla -> allocation *)
+  fun makeAlloc table temp = "%"^(valOf (tabSaca (temp, table)))
 
   (* Elimina de ms todos los move relacionados al nodo t *)
   fun filterMoves t ms = List.filter (fn (t1,t2) => t1<>t andalso t2<>t) ms
@@ -84,7 +84,7 @@ structure regalloc :> regalloc = struct
       val _ = removeNodeWithEdges adj t
       val _ = removeNode mov t
       (* mete el temporal t su lista de adyacentes a la pila *)
-      val _ = pushPila selectStack (t, adjs)
+      val _ = pushPila selectStack {temp=t, adjs=adjs, alias=NONE}
       (* debug *)
       val _ = printInterGraph (ig, ms)
     in
@@ -107,13 +107,19 @@ structure regalloc :> regalloc = struct
       val _ = removeNodeWithEdges adj coalesced
       val _ = removeNodeWithEdges mov coalesced
       (* actualiza los moves con el nuevo alias *)
-      fun updateMove (t1,t2) =
-        if t1=coalesced then (temp,t2)
-        else if t2=coalesced then (t1,temp)
-        else (t1,t2)
-      val ms' = List.map updateMove ms
+      fun updateMoves [] rs = rs
+        | updateMoves ((t1,t2)::ms) rs =
+        if t1=coalesced then
+          if t2=temp then updateMoves ms rs
+          else updateMoves ms ((temp,t2)::rs)
+        else if t2=coalesced then
+          if t1=temp then updateMoves ms rs
+          else updateMoves ms ((t1,temp)::rs)
+        else
+          updateMoves ms ((t1,t2)::rs)
+      val ms' = updateMoves ms []
       (* agrega el nodo fusionado al mapa de alias *)
-      val _ = tabMete (coalesced, temp, alias)
+      val _ = pushPila selectStack {temp=coalesced, adjs=makeTempSet[], alias=SOME temp}
       (* debug *)
       val _ = printInterGraph (ig, ms')
     in
@@ -150,7 +156,7 @@ structure regalloc :> regalloc = struct
       (* elimina de ms todos los move relacionados al nodo t *)
       val ms' = filterMoves t ms
       (* mete el temporal t su lista de adyacentes a la pila *)
-      val _ = pushPila selectStack (t, adjs)
+      val _ = pushPila selectStack {temp=t, adjs=adjs, alias=NONE}
       (* debug *)
       val _ = printInterGraph (ig, ms')
     in
@@ -282,34 +288,57 @@ structure regalloc :> regalloc = struct
       and select instrs =
         let
           val _ = printDebug "Select\n"
-          val alloc : (temp, string) Tabla = tabNueva()
-          val _ = Splayset.app (fn r => tabMete (r, r, alloc)) precolored
+          val alloc : (temp, string option) Tabla = tabNueva()
+          val _ = Splayset.app (fn r => tabMete (r, SOME r, alloc)) precolored
           (* asigna color a un temp distinto al de sus vecinos *)
-          fun color ((t, adjs), spilled) =
-            let
-              val _ = printDebug ("## coloring "^t^" ##\n")
-              val neighbors = difference (adjs, spilled)
-              val _ = printDebug ("neighbors: "^(setToStr id adjs)^"\n")
-              val usedColors =
-                makeTempSet (List.map (fn t => tabSaca (t,alloc)) (listItems neighbors))
-            in
-              case Splayset.find (fn c => notIn (usedColors, c)) precolored of
-                NONE => (printDebug "spilled!\n"; add (spilled, t))
-                | SOME c => (printDebug ("color: "^c^"\n"); tabMete (t, c, alloc); spilled)
-            end
+          fun color ({temp,adjs,alias=SOME a}, spilled) =
+                let
+                  val _ = printDebug ("## coloring "^temp^" ##\n")
+                  val c = tabSaca (a, alloc)
+                  val _ = printDebug ("alias: "^a^", color: "^(getOpt (c, "spilled"))^"\n")
+                  val _ = tabMete (temp, c, alloc)
+                in
+                  spilled
+                end
+            | color ({temp,adjs,alias=NONE}, spilled) =
+                let
+                  val _ = printDebug ("## coloring "^temp^" ##\n")
+                  val neighbors = difference (adjs, spilled)
+                  val _ = printDebug ("neighbors: "^(setToStr id adjs)^", ")
+                  fun aux (n, cs) = case tabSaca (n, alloc) of
+                    SOME c => c::cs
+                    | NONE => cs
+                  val usedColors = makeTempSet (List.foldl aux [] (listItems neighbors))
+                in
+                  case Splayset.find (fn c => notIn (usedColors, c)) precolored of
+                      SOME c => 
+                        (printDebug ("color: "^c^"\n");
+                        tabMete (temp, SOME c, alloc);
+                        spilled)
+                    | NONE => 
+                        (printDebug "spilled!\n";
+                        tabMete (temp, NONE, alloc);
+                        add (spilled, temp))
+                end
           (* colorea los nodos del stack *)
           val spilled = fold color (makeTempSet[]) selectStack
-          val _ = printDebug ("spilled: "^(setToStr id spilled)^"\n")
-          (* asigna el color de su alias a los nodos fusionados *)
-          fun useAlias() =
-            (tabConsume (fn (t,a) => tabMete (t, tabSaca (a, alloc), alloc)) alias;
-            printDebug "allocation:\n";
-            if !debug then showTabla (2, id, id, alloc) else ())
+          (* muestra los temps enviados a memoria para debug *)
+          fun showSpilled() = printDebug ("spilled: "^(setToStr id spilled)^"\n")
+          (* muestra la tabla alloc para debug *)
+          fun showAlloc() =
+            let
+              val _ = printDebug "allocation:\n";
+              fun aux (t, c) =
+                if member (precolored, t) then ()
+                else print ("  "^t^": "^(getOpt (c, "spilled"))^"\n")
+            in
+              if !debug then List.app aux (tabAList alloc) else ()
+            end
         in
           if isEmpty spilled then
-            (useAlias(); (instrs, makeAlloc alloc))
+            (showAlloc(); (instrs, makeAlloc alloc))
           else
-            rewrite (listItems spilled) instrs
+            (showSpilled(); rewrite (listItems spilled) instrs)
         end
 
       (* Reescribe el programa volcando a memoria los temporarios spilled *)

@@ -1,11 +1,9 @@
-/* ejemplo con variables */
+/* ejemplo con variables y llamada a función del runtime */
 /* $ ./tiger -arbol -ir -canon -alloc test/example04.tig */
 let
-  var x:string := "hola"
+  var x := "hola"
   var y := "mundo"
-  var a := 1
-  var b := 33
 in
-  if x=y then a else b
+  if x=y then 1 else 110
 end
 

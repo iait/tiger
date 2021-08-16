@@ -66,8 +66,7 @@ signature table = sig
   val tabAList : ('a, 'b) Tabla -> ('a * 'b) list
 
   (* Devuelve una nueva tabla copia de la anterior sin los elementos filtrados
-   * por la función proporcionada que aplica sobre los valores.
-   *)
+   * por la función proporcionada que aplica sobre los valores. *)
   val tabFiltra : ('b -> bool) * (''a, 'b) Tabla -> (''a, 'b) Tabla
 
   (* Devuelve el primer par de la tabla que cumpla el filtro *)
@@ -81,9 +80,6 @@ signature table = sig
 
   (* Compara por igualdad dos tablas *)
   val tabIguales : ('b * 'b -> bool) -> ((''a, 'b) Tabla * (''a, 'b) Tabla) -> bool
-
-  (* Consume el contenido de la tabla, dejándola vacía *)
-  val tabConsume : ('a * 'b -> unit) -> ('a, 'b) Tabla -> unit
 
   (* Imprime el contenido de la tabla para debug *)
   val showTabla : int * ('a -> string) * ('b -> string) * ('a, 'b) Tabla -> unit
