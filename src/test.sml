@@ -7,6 +7,7 @@ open seman
 open BasicIO Nonstdio
 open ast
 open error
+open util
 
 fun lexstream (is: instream) =
   Lexing.createLexer (fn b => fn n => buff_input is b 0 n)
@@ -29,13 +30,6 @@ fun compile src () =
     val expr = parse src
   in
     transProg expr
-  end
-
-fun isSuffix s1 s2 = 
-  let
-    val revert = String.implode o rev o String.explode
-  in
-    String.isPrefix (revert s1) (revert s2)
   end
 
 fun expect f NONE = ((f(); print "Ok\n"; true)

@@ -4,16 +4,19 @@ open line
 open astpp
 open escape
 open seman
-open BasicIO Nonstdio
+open Nonstdio
+open TextIO
 open error
 open trans
 open interp
 open codegen
 open assem
 open util
+open temp
+open Process
 
 (* lexstream : instream -> lexbuf *)
-fun lexstream (is: instream) =
+fun lexstream (is: BasicIO.instream) =
   Lexing.createLexer (fn b => fn n => buff_input is b 0 n);
 
 (* errParsing : lexbuf -> 'a *)
@@ -33,10 +36,10 @@ fun main args =
     val (alloc, l6)    = arg (l5, "-alloc")
     val (code, l7)    = arg (l6, "-code")
     (* instream *)
-    val entrada = case l7
-      of [n] => ((open_in n) handle _ => raise Fail (n^" no existe!"))
-       | []  => std_in
+    val (srcPath, entrada) = case l7
+      of [n] => ((n, BasicIO.open_in n) handle _ => raise Fail (n^" no existe!"))
        | _   => raise Fail "opción desconocida!"
+    val _ = if isSuffix ".tig" srcPath then () else raise Fail "debe tener extensión .tig"
     (* scanner *)
     val lexbuf = lexstream entrada
     (* parser *)
@@ -67,9 +70,29 @@ fun main args =
       splitFrags canonList
     (* interpreta código intermedio canonizado *)
     val _ = if inter then interpret true ps ss else ()
-    (* genera assembler de los procedimientos *)
-    val DEBUG = List.app (fn (l,s) => print (l^":\n"^s)) ss
-    val _ = List.app (codegen alloc) ps
+    (* crea archivo para el assembler *)
+    val execPath = (substring (srcPath, 0, (size srcPath)-(size ".tig")))
+    val assemPath = execPath^".s"
+    val out = openOut assemPath
+    val progName = List.last (String.fields (fn x => x = #"/") execPath)
+    val _ = output (out, "\n# programa "^progName^"\n\n")
+    val _ = output (out, "  .file \""^progName^".tig\"\n\n")
+    (* genera assembler para los strings *)
+    val _ = if ss=[] then () else 
+      (output (out, "  .section .rodata\n");
+      List.app (fn (l,s) => output (out, l^":\n"^s)) ss;
+      output (out, "\n"))
+    (* genera assembler para los procedimientos *)
+    val _ =
+      (output (out, "  .section .text\n");
+      List.app (codegen out alloc) ps;
+      output (out, "\n"))
+    (* cierra el archivo *)
+    val _ = closeOut out
+    (* enlaza con el runtime y genera el ejecutable *)
+    val status = system 
+      ("gcc -x assembler "^assemPath^" -x none -lruntime -Lsrc -no-pie -o "^execPath)
+    val _ = if status=success then () else raise Fail "Fallo al enlazar con runtime"
   in
     print "----Fin de la compilación\n"
   end	handle Fail s => print("Fail: "^s^"\n")

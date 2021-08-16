@@ -17,3 +17,12 @@ parser.output
 parser.sig
 parser.sml
 lexer.sml
+
+# c & assembler
+*.o
+*.a
+*.s
+
+# test
+test/*
+!test/*.tig

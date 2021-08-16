@@ -42,15 +42,20 @@ signature frame = sig
 
   (* crea un fragmento para un string *)
   val newStringFrag : temp.label -> string -> frag
-  
+
   (* crea la expresión para acceder a una variable *)
   val exp : access -> tree.exp -> tree.exp
-  
+
   (* invoca a una función externa *)
   val externalCall : string * tree.exp list -> tree.exp
-  
-  (* procedure entry exit *)
-  val procEntryExit1 : frame * tree.stm -> tree.stm
-  (*val procEntryExit2 : frame * tigerassem.instr list -> tigerassem.instr list*)
+
+  (* Agrega una instrucción ficticia al final de la lista de instrucciones para 
+   * indicar que los registros callee-save estarán vivos a la salida de la función *)
+  val procEntryExit2 : frame * assem.instr list -> assem.instr list
+
+  (* Agrega prólogo y epílogo de una llamada a función una vez que se conoce
+   * el tamaño del marco de activación de la función *)
+  val procEntryExit3 : frame * assem.instr list ->
+    {prolog: string, body: assem.instr list, epilog: string}
 
 end

@@ -1,0 +1,10 @@
+/* Ejemplo con funciones */
+/* $ ./tiger -arbol -ir -canon -alloc test/example06.tig */
+let
+  function suma(x: int, y: int):int = x+y
+  var a := 2
+  var b := 3
+in
+  suma(a, b)
+end
+

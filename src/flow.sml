@@ -37,7 +37,7 @@ structure flow :> flow = struct
       (* añade las instrucciones como nodos al grafo *)
       (* recibe los labels que definen la próxima instrucción y la lista de instrucciones,
        * va creando los nodos y acumulandolos en la tercer lista *)
-      fun makeNodes ls [] ns = (ls, ns)
+      fun makeNodes ls [] ns = ns
         | makeNodes ls ((i as OPER {assem,dst,src,jmp})::is) ns =
             let
               val n = addNewNode control
@@ -57,21 +57,8 @@ structure flow :> flow = struct
               val _ = tabMete (n, i, nodes)
               val _ = insertNodeLabels n ls
             in makeNodes [] is (n::ns) end
-      (* nodo inicial *)
-      val startNode = addNewNode control (* TODO completar def *)
-      val _ = tabMete (startNode, makeTempSet [], def)
-      val _ = tabMete (startNode, makeTempSet [], use)
-      val _ = tabMete (startNode, false, isMove)
-      val _ = tabMete (startNode, OPER {assem="",dst=[],src=[],jmp=[]}, nodes)
       (* crea los nodos y llena el mapa de labels *)
-      val (ls, ns) = makeNodes [] is [startNode]
-      (* nodo final *)
-      val endNode = addNewNode control (* TODO completar use *)
-      val _ = tabMete (endNode, makeTempSet [], def)
-      val _ = tabMete (endNode, makeTempSet [rax], use)
-      val _ = tabMete (endNode, false, isMove)
-      val _ = tabMete (endNode, OPER {assem="",dst=[],src=[],jmp=[]}, nodes)
-      val _ = insertNodeLabels endNode ls
+      val ns = makeNodes [] is []
       (* añade una arista dado un nodo y un label
        * el nodo sucesor se buscará en labelMap *)
       fun addNodeLabelEdge n l = addEdge control (n, tabSaca (l, labelMap))
@@ -99,7 +86,7 @@ structure flow :> flow = struct
                   | SOME p => addEdge control (p, n)
               in makeEdges (SOME n) ns end
           | LAB {assem,lab} => raise Fail "no debería llegar LAB"
-      val _ = makeEdges NONE (rev (endNode::ns))
+      val _ = makeEdges NONE (rev ns)
     in fg end
 
   (* imprime el control-flow graph para debug *)

@@ -2,6 +2,9 @@ signature util = sig
 
   exception Duplicated of string
 
+  (* Verifica si es sufijo *)
+  val isSuffix : string -> string -> bool
+
   (* Convierte una lista de booleanos en un string con sus índices *)
   val boolsToStr : bool list -> string
 

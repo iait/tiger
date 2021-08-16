@@ -7,6 +7,8 @@ structure codegen :> codegen = struct
   open regalloc
   open graph
   open flow
+  open TextIO
+  open util
 
   (* lista de instrucciones *)
   val ilist = ref ([] : instr list)
@@ -205,7 +207,7 @@ structure codegen :> codegen = struct
             | emitComp oper (MEM e1) e2 =
                 (emitOper ("cmpq `s0, (`s1)") [munchExp e2, munchExp e1] []; oper)
             | emitComp oper e1 (CONST n2) =
-                (emitOper ("cmpq $"^(fmt n2)^" , `s0") [munchExp e1] []; oper)
+                (emitOper ("cmpq $"^(fmt n2)^", `s0") [munchExp e1] []; oper)
             | emitComp oper e1 (MEM e2) =
                 emitComp (notRel oper) (MEM e2) e1
             | emitComp oper e1 e2 =
@@ -231,24 +233,30 @@ structure codegen :> codegen = struct
   (* originalCodegen : frame.frame -> tree.stm -> assem.instr list *)
   fun originalCodegen frame stm = (munchStm stm; rev (!ilist))
 
-  (* codegen : bool -> (stm list * frame) -> unit *)
-  fun codegen alloc (stms, frame) =
+  (* Genera el código assembler para un procedimiento y lo vuelca en el outstream *)
+  (* codegen : outstream -> bool -> (stm list * frame) -> unit *)
+  fun codegen out debug (stms, frame) =
     let
       val _ = ilist := []
       val _ = List.app munchStm stms
       val instrs = rev (!ilist)
       (* imprime las instrucciones antes de la asignación de registros *)
       val _ =
-        if alloc then
+        if debug then
           (print "Instrucciones originales\n";
           print ((name frame)^":\n");
           List.app (print o (format id)) instrs)
         else ()
       (* calcula la asignación de registros *)
-      val (is, saytemp) = regalloc alloc frame instrs
+      val (is, saytemp) = regalloc debug frame (procEntryExit2 (frame, instrs))
+      (* genera prólogo y epílogo de la función *)
+      val {prolog, body, epilog} = procEntryExit3 (frame, is)
+      (* escribe en el archivo assembler *)
+      fun writeOut s = output (out, s)
     in
-      print ((name frame)^":\n");
-      List.app (print o (format saytemp)) is 
+      writeOut prolog;
+      List.app (writeOut o (format saytemp)) body;
+      writeOut epilog
     end 
 
 end

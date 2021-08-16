@@ -21,12 +21,13 @@
 structure frame :> frame = struct
 
   open tree
+  open assem
 
   type frame = {
       name: string,            (* nombre de la función *)
       formals: bool list,      (* cuales parámetros formales de la función son escapados *)
       locals: bool list,       (* cuales variables locales son escapadas *)
-      actualLocal: int ref     (* ubicación de la última variable local en words *)
+      localCount: int ref      (* número de variables locales *)
   }
   
   type register = string
@@ -54,9 +55,6 @@ structure frame :> frame = struct
   val fpPrev = 0               (* ubicación del fp anterior *)
   val fpPrevLev = 2*wSz        (* ubicación del static link *)
   
-  val localsInicial = 0        (* inicialmente no hay variables locales *)
-  val localsGap = ~wSz         (* gap para el primer local en el stack *)
-  
   val argsGap = 2*wSz          (* gap para el primer arg en el stack *)
 
   val argRegs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
@@ -69,7 +67,7 @@ structure frame :> frame = struct
       name = name,
       formals = formals,
       locals = [],
-      actualLocal = ref 0
+      localCount = ref 0
   }
 
   (* obtiene el nombre del frame *)
@@ -91,13 +89,12 @@ structure frame :> frame = struct
 
   (* allocLocal : frame -> bool -> access
    * crea un acceso para una variable local
-   * el segundo argumento indica si la variable está escapada o no
-   *)
+   * el segundo argumento indica si la variable está escapada o no *)
   fun allocLocal (f: frame) true =
         let
-          val actualLocal = #actualLocal(f)
-          val ret = InFrame (!actualLocal*wSz+localsGap)
-          val _ = actualLocal := (!actualLocal - 1)
+          val localCount = #localCount(f)
+          val _ = localCount := (!localCount + 1)
+          val ret = InFrame (!localCount * ~wSz)
         in
           ret
         end
@@ -107,8 +104,7 @@ structure frame :> frame = struct
   val allocArg = allocLocal
 
   (* newStringFrag : temp.label -> string -> frag
-   * crea un fragmento para un string 
-   *)
+   * crea un fragmento para un string *)
   fun newStringFrag label s = 
     let
       fun stringLen s =
@@ -140,7 +136,36 @@ structure frame :> frame = struct
    *)
   fun externalCall (s, l) = CALL (NAME s, l)
 
-  (* TODO *)
-  fun procEntryExit1 (frame, body) = body
+  (* Agrega una instrucción ficticia al final de la lista de instrucciones para 
+   * indicar que los registros callee-save estarán vivos a la salida de la función *)
+  (* procEntryExit2 : frame * instr list -> instr list *)
+  fun procEntryExit2 (frame, body) =
+    body @ [OPER {assem="", dst=[], src=(rv::calleeSave), jmp=[]}]
+
+  (* Agrega prólogo y epílogo de una función una vez que se conoce el tamaño del 
+   * marco de activación de la misma *)
+  (* procEntryExit3 : frame * instr list -> {prolog: string, body: instr list, epilog: string} *)
+  fun procEntryExit3 (frame, body) =
+    let
+      val name = name frame
+      val size = !(#localCount(frame)) * wSz
+      val allocStack = 
+        if size=0 then "" 
+        else "  subq $"^(Int.toString size)^", %rsp\n"
+      val prolog = 
+        "  .globl "^name^"\n"^
+        "  .type "^name^", @function\n"^
+        name^":\n"^
+        "  pushq %rbp\n"^
+        "  movq %rsp, %rbp\n"^
+        allocStack
+      val epilog = 
+        "  movq %rbp, %rsp\n"^
+        "  popq %rbp\n"^
+        "  ret\n"^
+        "  .size "^name^", .-"^name^"\n\n"
+    in
+      {prolog=prolog, body=body, epilog=epilog}
+    end
 
 end

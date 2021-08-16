@@ -4,7 +4,7 @@ let
   var x:string := "hola"
   var y := "mundo"
   var a := 1
-  var b := 0
+  var b := 33
 in
   if x=y then a else b
 end

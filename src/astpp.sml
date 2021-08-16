@@ -11,7 +11,7 @@ structure astpp :> astpp = struct
         add_break pps (0, 1);
         add_string pps "escape=";
         add_string pps (Bool.toString(!escape));
-        add_string pps ("typ="^typ^"}");
+        add_string pps (",typ="^typ^"}");
         add_break pps (0, 1))
   
       and ppd (FunctionDec flist) = (
@@ -198,7 +198,7 @@ structure astpp :> astpp = struct
             add_string pps "CallExp{"; add_break pps (0, 0);
             add_string pps ("func="^func^","); add_break pps (0, 0);
             add_string pps "args=[";
-            List.app (fn e => (ppe e; add_break pps (0, 0))) args;
+            List.app (fn e => (ppe e; add_string pps ","; add_break pps (0, 0))) args;
             add_string pps "]}";
             add_break pps (0, 0);
             end_block pps)

@@ -538,15 +538,26 @@ structure trans :> trans = struct
 
 (*************** declaración de función ***************)
 
+  (* Agrega sentencias para:
+   * 1) mover cada arg entrante hacia nuevos temp o hacia memoria (si escapa)
+   * 2) guardar y restaurar los registros callee-save *)
+  (* TODO parte 1 *)
+  fun procEntryExit1 (frame, body) = 
+    let
+      val callees = List.map (fn r => (newTemp(), r)) calleeSave
+      val saveCallee = List.map (fn (t,r) => MOVE (TEMP t, TEMP r)) callees
+      val restoreCallee = List.map (fn (t,r) => MOVE (TEMP r, TEMP t)) callees
+    in
+      seq (saveCallee @ [body] @ restoreCallee)
+    end
+
   (* procEntryExit : {level: trans.level, body: trans.exp} -> unit *)
   fun procEntryExit {level: level, body: exp} =
     let
       val frame = #frame(level)
-      val label = STRING (name frame, "")
       val proc = PROC {body = [unNx body], frame = frame}
-      val final = STRING ("#############", "")
     in  
-      datosGlobs := (!datosGlobs @ [label, proc, final])
+      datosGlobs := (!datosGlobs @ [proc]) (*TODO por qué al final?*)
     end
 
   (* preFunctionDec : unit -> unit *)

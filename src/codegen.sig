@@ -1,5 +1,6 @@
 signature codegen = sig
 
-  val codegen : bool -> (tree.stm list * frame.frame) -> unit
+  (* Genera el código assembler para un procedimiento y lo vuelca en el outstream *)
+  val codegen : TextIO.outstream -> bool -> (tree.stm list * frame.frame) -> unit
 
 end

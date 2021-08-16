@@ -5,6 +5,14 @@ structure util :> util = struct
   
   exception Duplicated of string
 
+  (* Indica si s1 es sufijo de s2 *)
+  fun isSuffix s1 s2 = 
+    let
+      val revert = String.implode o rev o String.explode
+    in
+      String.isPrefix (revert s1) (revert s2)
+    end
+
   local
     fun aux1 _ [] = []
       | aux1 n (b::bs) = if b then aux1 (n+1) bs else n::(aux1 (n+1) bs)

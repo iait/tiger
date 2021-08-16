@@ -9,6 +9,8 @@ structure regalloc :> regalloc = struct
   open Splayset
   open stack
   open table
+  open temp
+  open util
 
   (* bandera para debug *)
   val debug = ref false
@@ -297,15 +299,15 @@ structure regalloc :> regalloc = struct
             end
           (* colorea los nodos del stack *)
           val spilled = fold color (makeTempSet[]) selectStack
-          (* asigna el color de su alias a los nodos fusionados *)
-          val _ = tabConsume (fn (t,a) => tabMete (t, tabSaca (a, alloc), alloc)) alias
-          (* resultado de select para debug *)
-          val _ = printDebug "allocation:\n"
-          val _ = if !debug then showTabla (2, id, id, alloc) else ()
           val _ = printDebug ("spilled: "^(setToStr id spilled)^"\n")
+          (* asigna el color de su alias a los nodos fusionados *)
+          fun useAlias() =
+            (tabConsume (fn (t,a) => tabMete (t, tabSaca (a, alloc), alloc)) alias;
+            printDebug "allocation:\n";
+            if !debug then showTabla (2, id, id, alloc) else ())
         in
           if isEmpty spilled then
-            (instrs, makeAlloc alloc)
+            (useAlias(); (instrs, makeAlloc alloc))
           else
             rewrite (listItems spilled) instrs
         end

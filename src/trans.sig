@@ -96,7 +96,7 @@ signature trans = sig
   val splitFrags : 
     frag list -> (tree.stm list * frame.frame) list * (temp.label * string) list
 
-  (* DEBUG *)
+  (* Para debug *)
   val printTransExp : exp -> unit
 
 end
