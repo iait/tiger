@@ -3,18 +3,17 @@
     Los 6 primeros argumentos en registros: rdi, rsi, rdx, rcx, r8, r9
     Resto de los argumentos van en el stack
 
-        |    argn     |    fp+8*(n-4)
-        |    ...      |
-        |    arg8     |    fp+32
-        |    arg7     |    fp+24
-        | static link |    fp+16 (fp del nivel estático anterior del llamado)
-        |  retorno    |    fp+8
-        |   fp ant    |    fp
-        ---------------
-        |   local1    |    fp-8
-        |   local2    |    fp-16
-        |    ...      |
-        |   localn    |    fp-8*n
+    |    argn     |    fp + (n-5)*wSz
+    |    ...      |
+    |    arg8     |    fp + 3*wSz
+    |    arg7     |    fp + 2*wSz
+    |  ret addr   |    fp + 1*wSz
+    |   fp ant    |    fp
+    ---------------
+    |   local1    |    fp - 1*wSz (static link)
+    |   local2    |    fp - 2*wSz
+    |    ...      |
+    |   localn    |    fp - n*wSz
 
 *)
 
@@ -22,24 +21,22 @@ structure frame :> frame = struct
 
   open tree
   open assem
-
-  type frame = {
-      name: string,            (* nombre de la función *)
-      formals: bool list,      (* cuales parámetros formales de la función son escapados *)
-      locals: bool list,       (* cuales variables locales son escapadas *)
-      localCount: int ref      (* número de variables locales *)
-  }
-  
-  type register = string
+  open temp
 
   (* acceso a una variable o parámetro formal de función *)
   datatype access = InFrame of int (* offset desde el fp *)
                   | InReg of temp.temp
 
-  (* fragmento de assembler TODO revisar este comentario
-   * puede ser procedimiento con un árbol de código intermedio
-   * o un string con etiqueta.
-   *)
+  type frame = {
+      name: string,          (* nombre de la función *)
+      outAccs: access list,  (* donde el llamante pone los argumentos *)
+      inAccs: access list,   (* donde la función llamada ve los argumentos *)
+      locCount: int ref      (* número de variables locales *)
+  }
+
+  (* fragmento del programa:
+   * puede ser procedimiento con un frame y una lista de sentencias de código intermedio
+   * o un string con etiqueta. *)
   datatype frag = PROC of {body: tree.stm list, frame: frame} 
                 | STRING of temp.label * string
 
@@ -53,7 +50,7 @@ structure frame :> frame = struct
   val log2wSz = 3              (* log base 2 de word size *)
 
   val fpPrev = 0               (* ubicación del fp anterior *)
-  val fpPrevLev = 2*wSz        (* ubicación del static link *)
+  val fpPrevLev = ~wSz        (* ubicación del static link *)
   
   val argsGap = 2*wSz          (* gap para el primer arg en el stack *)
 
@@ -61,50 +58,58 @@ structure frame :> frame = struct
   val callerSave = ["rax", "rcx", "rdx", "rsi", "rdi", "r8", "r9", "r10", "r11"]
   val calleeSave = ["rbx", "r12", "r13", "r14", "r15"]
   val machineRegs = callerSave @ calleeSave (* 14 registros *)
+  val specialRegs = ["rbp", "rsp"]
 
   (* crea un nuevo frame *)
-  fun newFrame {name, formals} = {
-      name = name,
-      formals = formals,
-      locals = [],
-      localCount = ref 0
-  }
+  (* newFrame : {name: string, formals: bool list} -> frame *)
+  fun newFrame {name, formals} =
+    let
+      (* crea accesos donde el llamante pone los argumentos *)
+      fun createOutAccs 0 regs argCount = []
+        | createOutAccs n [] argCount =
+            (InFrame (argCount*wSz + 2*wSz)) :: (createOutAccs (n-1) [] (argCount+1))
+        | createOutAccs n (r::rs) argCount =
+            (InReg r) :: (createOutAccs (n-1) rs argCount)
 
-  (* obtiene el nombre del frame *)
-  fun name (f: frame) = #name f
-
-  (* formals : frame -> access list
-   * crea una lista de accesos para los argumentos de una función
-   * envía los primeros 6 argumentos a registros y el resto en el stack
-   *)
-  fun formals (f: frame) =
-    let 
-      fun aux [] _ _ acs = acs
-            | aux (true::t) regs n acs = aux t regs (n+1) (InFrame (n*wSz+argsGap) :: acs)
-            | aux (false::t) [] n acs = aux t [] (n+1) (InFrame (n*wSz+argsGap) :: acs)
-            | aux (false::t) (r::regs) n acs = aux t regs n (InReg r :: acs)
+      (* crea accesos donde la función llamada verá los argumentos *)
+      val locCount = ref 0
+      fun createInAccs [] = []
+        | createInAccs (true::fs) =
+            (locCount := (!locCount + 1);
+            (InFrame (!locCount * ~wSz)) :: (createInAccs fs))
+        | createInAccs (false::fs) =
+            (InReg (newTemp())) :: (createInAccs fs)
     in
-      aux (#formals(f)) argRegs 0 []
+      {
+        name = name,
+        outAccs = createOutAccs (length formals) argRegs 0,
+        inAccs = createInAccs formals,
+        locCount = locCount
+      }
     end
 
-  (* allocLocal : frame -> bool -> access
-   * crea un acceso para una variable local
-   * el segundo argumento indica si la variable está escapada o no *)
-  fun allocLocal (f: frame) true =
-        let
-          val localCount = #localCount(f)
-          val _ = localCount := (!localCount + 1)
-          val ret = InFrame (!localCount * ~wSz)
-        in
-          ret
-        end
-    | allocLocal (f: frame) false = InReg (temp.newTemp())
-  
-  (* TODO *)
-  val allocArg = allocLocal
+  (* obtiene el nombre del frame *)
+  (* name : frame -> string *)
+  fun name {name,outAccs,inAccs,locCount} = name
 
-  (* newStringFrag : temp.label -> string -> frag
-   * crea un fragmento para un string *)
+  (* devuelve la lista de accesos donde el llamante pone los argumentos *)
+  fun outAccs {name,outAccs,inAccs,locCount} = outAccs
+
+  (* devuelve la lista de accesos donde la función llamada ve los argumentos *)
+  fun inAccs {name,outAccs,inAccs,locCount} = inAccs
+
+  (* crea un acceso para una variable local *)
+  (* allocLocal : frame -> bool -> access *)
+  fun allocLocal {name,outAccs,inAccs,locCount} false = InReg (newTemp())
+    | allocLocal {name,outAccs,inAccs,locCount} true =
+      let
+        val _ = locCount := (!locCount + 1) 
+      in
+        InFrame (!locCount * ~wSz)
+      end
+
+  (* crea un fragmento para un string *)
+  (* newStringFrag : temp.label -> string -> frag *)
   fun newStringFrag label s = 
     let
       fun stringLen s =
@@ -124,16 +129,14 @@ structure frame :> frame = struct
       STRING (label, value)
     end
 
-  (* exp : frame.access -> tree.exp -> tree.exp
-   * recibe el acceso a una variable, la expresión para acceder al fp
-   * donde pertenece la variable y crea expresión para acceder a la variable
-   *)
-  fun exp (InFrame k) e = MEM (BINOP (PLUS, e, CONST k))
-    | exp (InReg t) _ = TEMP t
+  (* recibe el acceso a una variable, la expresión para acceder al fp
+   * donde pertenece la variable y crea expresión para acceder a la variable *)
+  (* accToExp : frame.access -> tree.exp -> tree.exp *)
+  fun accToExp (InFrame k) fpExp = MEM (BINOP (PLUS, fpExp, CONST k))
+    | accToExp (InReg t) fpExp = TEMP t
 
-  (* externalCall : string * tree.exp list -> tree.exp
-   * invoca a una función externa 
-   *)
+  (* invoca a una función externa *)
+  (* externalCall : string * tree.exp list -> tree.exp *)
   fun externalCall (s, l) = CALL (NAME s, l)
 
   (* Agrega una instrucción ficticia al final de la lista de instrucciones para 
@@ -145,10 +148,9 @@ structure frame :> frame = struct
   (* Agrega prólogo y epílogo de una función una vez que se conoce el tamaño del 
    * marco de activación de la misma *)
   (* procEntryExit3 : frame * instr list -> {prolog: string, body: instr list, epilog: string} *)
-  fun procEntryExit3 (frame, body) =
+  fun procEntryExit3 ({name,outAccs,inAccs,locCount}, body) =
     let
-      val name = name frame
-      val size = !(#localCount(frame)) * wSz
+      val size = !locCount * wSz
       val allocStack = 
         if size=0 then "" 
         else "  subq $"^(Int.toString size)^", %rsp\n"

@@ -37,20 +37,23 @@ structure trans :> trans = struct
   (* crea un nuevo level a partir del level padre *)
   fun newLevel {parent={parent, frame, level}, name, formals} = {
     parent = SOME frame,
-    frame = newFrame {name=name, formals=formals},
+    frame = newFrame {name=name, formals=false::formals},
     level = level + 1
   }
 
-  (* TODO por qué se llama parent??? no sería el level actual *)
-  fun allocArg {parent, frame, level} b = frame.allocArg frame b
+  (* crea un acceso para una variable local *)
+  (* allocLocal : level -> bool -> access *)
   fun allocLocal {parent, frame, level} b = frame.allocLocal frame b
-  fun formals {parent, frame, level} = frame.formals frame
+  
+  (* Devuelve los accesos a los argumentos vistos desde la función llamada.
+   * Se toma el tl de la lista porque el primer argumento es el static link *)
+  fun formals {parent, frame, level} = tl (inAccs frame)
 
   datatype exp = Ex of tree.exp
                | Nx of tree.stm
                | Cx of label * label -> tree.stm
 
-  (* DEBUG *)
+  (* para debug *)
   fun printTransExp (Ex e) = (print "exp: "; print (printTreeExp e)) 
     | printTransExp (Nx s) = print "stm"
     | printTransExp (Cx c) = print "cond"
@@ -167,7 +170,7 @@ structure trans :> trans = struct
       fun aux 0 = TEMP fp
         | aux n = MEM (BINOP (PLUS, aux (n-1), CONST fpPrevLev))
     in
-      Ex (frame.exp acc (aux dist))
+      Ex (frame.accToExp acc (aux dist))
     end
   
   (* fieldVar : trans.exp * int -> trans.exp
@@ -230,7 +233,7 @@ structure trans :> trans = struct
 (*************** llamada a función ***************)
 
   (* val callExp : 
-      {name: temp.label, extern: bool, proc: bool, lev: level, args: trans.exp list}
+      {name: label, extern: bool, proc: bool, lev: level, args: trans.exp list}
       -> trans.exp *)
   fun callExp {name, extern, proc, lev: level, args} = 
     let
@@ -265,8 +268,8 @@ structure trans :> trans = struct
 
       (* agrega el static link si la función NO es externa *)
       val argExps' = 
-        if extern then argExps
-        else (staticLink (getActualLev()) (#level(lev)))::argExps
+        if extern then rev argExps
+        else (staticLink (getActualLev()) (#level(lev)))::(rev argExps)
 
       (* crea un temporal para el retorno si la función devuelve algo *)
       val returnTemp = if proc then NONE else SOME (newTemp())
@@ -541,14 +544,17 @@ structure trans :> trans = struct
   (* Agrega sentencias para:
    * 1) mover cada arg entrante hacia nuevos temp o hacia memoria (si escapa)
    * 2) guardar y restaurar los registros callee-save *)
-  (* TODO parte 1 *)
   fun procEntryExit1 (frame, body) = 
     let
+      (* realiza el view shift, mueve cada arg entrante a donde lo espera la función *)
+      fun shift (inAcc, outAcc) = MOVE (accToExp inAcc (TEMP fp), accToExp outAcc (TEMP fp))
+      val viewShift = List.map shift (ListPair.zip (inAccs frame, outAccs frame))
+      (* guardar y restaurar los registros callee-save *)
       val callees = List.map (fn r => (newTemp(), r)) calleeSave
       val saveCallee = List.map (fn (t,r) => MOVE (TEMP t, TEMP r)) callees
       val restoreCallee = List.map (fn (t,r) => MOVE (TEMP r, TEMP t)) callees
     in
-      seq (saveCallee @ [body] @ restoreCallee)
+      seq (viewShift @ saveCallee @ [body] @ restoreCallee)
     end
 
   (* procEntryExit : {level: trans.level, body: trans.exp} -> unit *)
@@ -557,7 +563,7 @@ structure trans :> trans = struct
       val frame = #frame(level)
       val proc = PROC {body = [unNx body], frame = frame}
     in  
-      datosGlobs := (!datosGlobs @ [proc]) (*TODO por qué al final?*)
+      datosGlobs := (!datosGlobs @ [proc])
     end
 
   (* preFunctionDec : unit -> unit *)

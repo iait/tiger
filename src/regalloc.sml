@@ -25,7 +25,7 @@ structure regalloc :> regalloc = struct
   val K = List.length machineRegs
 
   (* nodos precoloreados *)
-  val precolored: temp set = makeTempSet machineRegs
+  val precolored: temp set = makeTempSet (machineRegs @ specialRegs)
 
   (* genera string para un move *)
   fun showMove (t1,t2) = t2^"<-"^t1
@@ -206,7 +206,8 @@ structure regalloc :> regalloc = struct
           (* devuelve un mov que sea seguro fusionar *)
           fun findMov [] rs = NONE
             | findMov ((t1,t2)::ms) rs =
-                if notIn (tabSaca (t1, adj), t2) andalso briggs (t1,t2) then
+                if (notIn (precolored, t1) orelse notIn (precolored, t2))
+                andalso notIn (tabSaca (t1, adj), t2) andalso briggs (t1,t2) then
                   SOME ((t1,t2), rs @ ms)
                 else
                   findMov ms ((t1,t2)::rs)

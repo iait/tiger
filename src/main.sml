@@ -56,8 +56,6 @@ fun main args =
     val _ = print "----Traducción a código intermedio\n"
     val _ = transProg expr
     val fragList : frag list = getResult()
-    (*val DEGUB = print 
-      ("cantidad de fragmentos: "^((Int.toString o List.length) fragList)^"\n")*)
     (* imprime código intermedio *)
     val _ = if ir then printIr fragList else ()
     (* canoniza código intermedio *)

@@ -462,9 +462,10 @@ structure seman :> seman = struct
                   val r = tipoRetorno nl result
                   val formals = List.map (fn f => !(#escape(f))) params
                   (* crea nuevo level *)
-                  val lev = newLevel {parent=topLevel(), name=name, formals=formals}
+                  val label = if name="_tigermain" then "_tigermain" else newLabel()
+                  val lev = newLevel {parent=topLevel(), name=label, formals=formals}
                   val entry = Func {
-                    level=lev, label=newLabel(), formals=fs, result=r, extern=false}
+                    level=lev, label=label, formals=fs, result=r, extern=false}
                 in
                   (name, entry)
                 end
@@ -479,10 +480,10 @@ structure seman :> seman = struct
               val levels = List.map extractLevel entries
 
               (* traduce un parámetro de función a su EnvEntry de tipo Var *)
-              fun paramToVar nl {name,escape,typ} = 
+              fun paramToVar nl ({name,escape,typ}, acc) = 
                 (name, Var {
                   ty=findTipo nl typ,
-                  access=allocArg (topLevel()) (!escape),
+                  access=acc,
                   level=getActualLev()})
 
               (* traduce una función y verifica el tipo de retorno *)
@@ -491,7 +492,9 @@ structure seman :> seman = struct
                   (* pre *)
                   val _ = (preFunctionDec(); pushLevel lev)
                   (* crear nuevo entorno con las variables de los parámetros *)
-                  val venv'' = tabInserList (venv', List.map (paramToVar nl) params)
+                  val accs = formals (topLevel())
+                  val args = List.map (paramToVar nl) (ListPair.zip (params, accs))
+                  val venv'' = tabInserList (venv', args)
                   (* traduce la expresión del body de la función *)
                   val {exp=expbody, ty=tybody} = transExp (venv'', tenv) body
                   (*val DEBUG = printTransExp expbody*)

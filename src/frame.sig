@@ -1,7 +1,6 @@
 signature frame = sig
 
   type frame
-  type register = string
 
   datatype access = InFrame of int (* offset desde el fp *)
                   | InReg of temp.temp
@@ -27,24 +26,28 @@ signature frame = sig
   val callerSave : temp.temp list
   val calleeSave : temp.temp list
   val machineRegs : temp.temp list
+  val specialRegs : temp.temp list
 
   (* crea un nuevo frame *)
   val newFrame : {name: temp.label, formals: bool list} -> frame
+
   (* obtiene el nombre del frame *)
   val name : frame -> string
 
-  (* crea una lista de accesos para los argumentos de una función *)
-  val formals : frame -> access list
+  (* devuelve la lista de accesos donde el llamante pone los argumentos *)
+  val outAccs : frame -> access list
+
+  (* devuelve la lista de accesos donde la función llamada ve los argumentos *)
+  val inAccs : frame -> access list
+
   (* crea un acceso para una variable local *)
   val allocLocal : frame -> bool -> access
-  (* TODO *)
-  val allocArg : frame -> bool -> access
 
   (* crea un fragmento para un string *)
   val newStringFrag : temp.label -> string -> frag
 
   (* crea la expresión para acceder a una variable *)
-  val exp : access -> tree.exp -> tree.exp
+  val accToExp : access -> tree.exp -> tree.exp
 
   (* invoca a una función externa *)
   val externalCall : string * tree.exp list -> tree.exp

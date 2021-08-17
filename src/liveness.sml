@@ -116,8 +116,8 @@ structure liveness :> liveness = struct
       val (inter as {adj, mov}) = {adj=tabNueva(), mov=tabNueva()}
       (* crea todos los nodos *)
       val ts = tabClaves temps
-      val _ = List.app (fn t => tabMete (t, makeTempSet[], adj)) ts
-      val _ = List.app (fn t => tabMete (t, makeTempSet[], mov)) ts
+      val _ = List.app (addNode adj) ts
+      val _ = List.app (addNode mov) ts
       (* función para calcular el grafo de interferencias *)
       (* interference : (int * instr) * move list -> move list *)
       fun interference ((n, OPER _), ms) =
