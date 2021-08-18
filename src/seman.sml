@@ -10,6 +10,7 @@ structure seman :> seman = struct
   open typepp
   open error
   open stack
+  open temp
 
   type expty = {exp: exp, ty: Tipo}
 
@@ -462,7 +463,7 @@ structure seman :> seman = struct
                   val r = tipoRetorno nl result
                   val formals = List.map (fn f => !(#escape(f))) params
                   (* crea nuevo level *)
-                  val label = if name="_tigermain" then "_tigermain" else newLabel()
+                  val label = if name="_tigermain" then "_tigermain" else (newLabel()^"_"^name)
                   val lev = newLevel {parent=topLevel(), name=label, formals=formals}
                   val entry = Func {
                     level=lev, label=label, formals=fs, result=r, extern=false}

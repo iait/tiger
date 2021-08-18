@@ -54,7 +54,7 @@ fun main args =
     val _ = if escapes then printAst expr else ()
     (* chequeo de tipos y traducción a código intermedio *)
     val _ = print "----Traducción a código intermedio\n"
-    val _ = transProg expr
+    val funcDebug = transProg expr
     val fragList : frag list = getResult()
     (* imprime código intermedio *)
     val _ = if ir then printIr fragList else ()

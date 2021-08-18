@@ -87,7 +87,7 @@ assem.uo: assem.ui temp.ui util.ui
 topsort.ui: table.ui tentry.uo ast.uo 
 frame.uo: frame.ui temp.ui assem.ui tree.uo 
 parser.uo: parser.ui line.uo ast.uo 
-seman.uo: seman.ui table.ui trans.ui typepp.ui tentry.uo topsort.ui \
+seman.uo: seman.ui table.ui trans.ui typepp.ui tentry.uo temp.ui topsort.ui \
     ventry.uo ast.uo error.uo stack.ui util.ui 
 astpp.uo: astpp.ui ast.uo 
 canon.ui: temp.ui tree.uo 

@@ -4,6 +4,7 @@
 REMOVE=rm -f
 MOVE=mv
 CHANGE=cd
+FIND=find
 MAKE=make
 
 .PHONY: clean
@@ -18,5 +19,6 @@ all:
 
 clean:
 	$(CHANGE) src; $(MAKE) clean
+	$(FIND) test/ -type f -not -name '*.tig' -delete
 	$(REMOVE) tiger
 	$(REMOVE) tiger-test

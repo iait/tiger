@@ -21,11 +21,14 @@ structure regalloc :> regalloc = struct
   (* pila de temps que vamos sacando del grafo de interferencias *)
   val selectStack: selectItem Pila = nuevaPila()
 
-  (* cantidad de colores *)
-  val K = List.length machineRegs
+  (* registros de la máquina *)
+  val machineRegs: temp set = makeTempSet (generalRegs @ specialRegs)
 
-  (* nodos precoloreados *)
-  val precolored: temp set = makeTempSet (machineRegs @ specialRegs)
+  (* registros que se pueden usar para colorear *)
+  val colorRegs: temp set = makeTempSet generalRegs
+
+  (* cantidad de colores *)
+  val K = numItems colorRegs
 
   (* genera string para un move *)
   fun showMove (t1,t2) = t2^"<-"^t1
@@ -96,7 +99,7 @@ structure regalloc :> regalloc = struct
   fun coalesceMov (t1, t2) (ig as {adj,mov}, ms) =
     let
       (* elige el temporario que queda y el fusionado *)
-      val (temp,coalesced) = if member (precolored, t1) then (t1,t2) else (t2,t1)
+      val (temp,coalesced) = if member (machineRegs, t1) then (t1,t2) else (t2,t1)
       val _ = printDebug ("## coalescing "^coalesced^" into "^temp^" ##\n")
       (* cada vecino de coalesced ahora será vecino de temp *)
       val adjs = tabSaca (coalesced, adj)
@@ -177,7 +180,7 @@ structure regalloc :> regalloc = struct
               val degree = numItems (tabSaca (t, adj))
               val movs = numItems (tabSaca (t, mov))
             in
-              degree < K andalso movs = 0 andalso notIn (precolored, t)
+              degree < K andalso movs = 0 andalso notIn (machineRegs, t)
             end
         in
           case List.find canSimplify (tabClaves adj) of
@@ -206,7 +209,7 @@ structure regalloc :> regalloc = struct
           (* devuelve un mov que sea seguro fusionar *)
           fun findMov [] rs = NONE
             | findMov ((t1,t2)::ms) rs =
-                if (notIn (precolored, t1) orelse notIn (precolored, t2))
+                if (notIn (machineRegs, t1) orelse notIn (machineRegs, t2))
                 andalso notIn (tabSaca (t1, adj), t2) andalso briggs (t1,t2) then
                   SOME ((t1,t2), rs @ ms)
                 else
@@ -226,7 +229,7 @@ structure regalloc :> regalloc = struct
                   val d' = numItems (tabSaca (t, adj))
                   val moveRelated = numItems (tabSaca (t, mov)) > 0
                 in
-                  if notIn (precolored, t) andalso moveRelated andalso d' < d then
+                  if notIn (machineRegs, t) andalso moveRelated andalso d' < d then
                     findFreeze ts (SOME t, d')
                   else
                     findFreeze ts (n, d)
@@ -245,7 +248,7 @@ structure regalloc :> regalloc = struct
                 let
                   val d' = numItems (tabSaca (t, adj))
                 in
-                  if notIn (precolored, t) andalso d' > d then
+                  if notIn (machineRegs, t) andalso d' > d then
                     findSpill ts (SOME t, d')
                   else
                     findSpill ts (n, d)
@@ -290,7 +293,7 @@ structure regalloc :> regalloc = struct
         let
           val _ = printDebug "Select\n"
           val alloc : (temp, string option) Tabla = tabNueva()
-          val _ = Splayset.app (fn r => tabMete (r, SOME r, alloc)) precolored
+          val _ = Splayset.app (fn r => tabMete (r, SOME r, alloc)) machineRegs
           (* asigna color a un temp distinto al de sus vecinos *)
           fun color ({temp,adjs,alias=SOME a}, spilled) =
                 let
@@ -311,7 +314,7 @@ structure regalloc :> regalloc = struct
                     | NONE => cs
                   val usedColors = makeTempSet (List.foldl aux [] (listItems neighbors))
                 in
-                  case Splayset.find (fn c => notIn (usedColors, c)) precolored of
+                  case Splayset.find (fn c => notIn (usedColors, c)) colorRegs of
                       SOME c => 
                         (printDebug ("color: "^c^"\n");
                         tabMete (temp, SOME c, alloc);
@@ -330,7 +333,7 @@ structure regalloc :> regalloc = struct
             let
               val _ = printDebug "allocation:\n";
               fun aux (t, c) =
-                if member (precolored, t) then ()
+                if member (machineRegs, t) then ()
                 else print ("  "^t^": "^(getOpt (c, "spilled"))^"\n")
             in
               if !debug then List.app aux (tabAList alloc) else ()
