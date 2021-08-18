@@ -37,7 +37,7 @@ structure trans :> trans = struct
   (* crea un nuevo level a partir del level padre *)
   fun newLevel {parent={parent, frame, level}, name, formals} = {
     parent = SOME frame,
-    frame = newFrame {name=name, formals=false::formals},
+    frame = newFrame {name=name, formals=true::formals},
     level = level + 1
   }
 

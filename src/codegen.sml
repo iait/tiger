@@ -93,7 +93,7 @@ structure codegen :> codegen = struct
 (************** munchArgs : tree.exp list -> temp list -> temp list ****************)
   (* genera instrucciones para mover cada argumento a la posición correcta *)
   and munchArgs [] _ = []
-    | munchArgs es [] = (List.app munchStack es; [])
+    | munchArgs es [] = (List.app munchStack (rev es); [])
     | munchArgs (e::es) (r::rs) =
         (munchStm (MOVE (TEMP r, e)); r::(munchArgs es rs))
 
@@ -122,14 +122,19 @@ structure codegen :> codegen = struct
   and munchStm (MOVE (TEMP t, CALL (NAME f, args))) =
         let
           (* para mantener alineamiento de 16-bytes en el stack *)
-          val stackRegs = length args - length frame.argRegs
+          val stackRegs =
+            if length args < length frame.argRegs then 0
+            else length args - length frame.argRegs
           val _ = 
-            if stackRegs < 0 orelse stackRegs mod 2 = 0 then ()
+            if stackRegs mod 2 = 0 then ()
             else emitOper "pushq $0" [] []
           val src = munchArgs args frame.argRegs
         in
           emitOper ("call "^f) src frame.callerSave;
-          if t=rv then () else emit (MOV {assem="movq `s0, `d0", dst=t, src=rv})
+          if stackRegs=0 then () 
+            else emitOper ("addq $"^(fmt (stackRegs*wSz))^", `d0") [sp] [sp];
+          if t=rv then () 
+            else emit (MOV {assem="movq `s0, `d0", dst=t, src=rv})
         end
     | munchStm (MOVE (TEMP t, CALL _)) =
         raise Fail "no debería existir este tipo de call a función"
@@ -155,7 +160,7 @@ structure codegen :> codegen = struct
         MEM (BINOP (PLUS, CONST n, e')) =>
           emitOper ("movq "^(fmt n)^"(`s0),`d0") [munchExp e'] [t]
       | MEM (BINOP (PLUS, e', CONST n)) =>
-          munchStm (MOVE (TEMP t, (BINOP (PLUS, CONST n, e'))))
+          munchStm (MOVE (TEMP t, (MEM (BINOP (PLUS, CONST n, e')))))
       | MEM e' =>
           emitOper ("movq (`s0), `d0") [munchExp e'] [t]
       | NAME l =>
@@ -237,7 +242,7 @@ structure codegen :> codegen = struct
   (* codegen : outstream -> bool -> (stm list * frame) -> unit *)
   fun codegen out debug (stms, frame) =
     let
-      val _ = ilist := []
+      val _ = ilist := [] 
       val _ = List.app munchStm stms
       val instrs = rev (!ilist)
       (* imprime las instrucciones antes de la asignación de registros *)

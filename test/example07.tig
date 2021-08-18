@@ -1,0 +1,9 @@
+/* Ejemplo con funciones anidadas y variables escapadas */
+/* $ ./tiger -arbol -ir -canon -alloc test/example07.tig */
+let
+  var x := 38
+  function fun():int = x
+in
+  fun()
+end
+

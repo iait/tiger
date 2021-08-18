@@ -34,9 +34,8 @@ fun main args =
     val (canon, l4)   = arg (l3, "-canon")
     val (inter, l5)  = arg (l4, "-inter")
     val (alloc, l6)    = arg (l5, "-alloc")
-    val (code, l7)    = arg (l6, "-code")
     (* instream *)
-    val (srcPath, entrada) = case l7
+    val (srcPath, entrada) = case l6
       of [n] => ((n, BasicIO.open_in n) handle _ => raise Fail (n^" no existe!"))
        | _   => raise Fail "opción desconocida!"
     val _ = if isSuffix ".tig" srcPath then () else raise Fail "debe tener extensión .tig"
@@ -54,7 +53,7 @@ fun main args =
     val _ = if escapes then printAst expr else ()
     (* chequeo de tipos y traducción a código intermedio *)
     val _ = print "----Traducción a código intermedio\n"
-    val funcDebug = transProg expr
+    val _ = transProg expr
     val fragList : frag list = getResult()
     (* imprime código intermedio *)
     val _ = if ir then printIr fragList else ()

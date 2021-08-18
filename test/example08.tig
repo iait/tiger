@@ -1,0 +1,9 @@
+/* Ejemplo de función con argumentos en el stack */
+/* $ ./tiger -arbol -ir -canon -alloc test/example08.tig */
+let
+  function fun(a:int, b:int, c:int, d:int, e:int, f:int, g:int):int =
+    a+b+c+d+e+(f-g)
+in
+  fun(1,2,3,4,5,6,7) /*14*/
+end
+
