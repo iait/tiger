@@ -98,18 +98,18 @@ test.uo: parser.ui astpp.ui seman.ui lexer.uo line.uo ast.uo error.uo \
     util.ui escape.ui 
 trans.ui: temp.ui frame.ui ast.uo tree.uo 
 assem.ui: temp.ui 
-codegen.uo: codegen.ui temp.ui graph.ui regalloc.ui frame.ui flow.ui \
-    assem.ui tree.uo util.ui 
+codegen.uo: codegen.ui temp.ui graph.ui frame.ui flow.ui assem.ui tree.uo \
+    util.ui 
 escape.ui: ast.uo 
 ventry.uo: table.ui trans.ui tentry.uo temp.ui ast.uo 
 astpp.ui: ast.uo 
 main.uo: parser.ui trans.ui interp.ui codegen.ui astpp.ui seman.ui temp.ui \
-    lexer.uo line.uo frame.ui error.uo ast.uo assem.ui tree.uo util.ui \
-    escape.ui 
+    lexer.uo regalloc.ui line.uo frame.ui error.uo ast.uo assem.ui tree.uo \
+    util.ui escape.ui 
 typepp.uo: typepp.ui table.ui tentry.uo 
 seman.ui: ast.uo 
 util.ui: temp.ui ast.uo 
-codegen.ui: frame.ui tree.uo 
+codegen.ui: assem.ui tree.uo 
 regalloc.ui: temp.ui frame.ui assem.ui 
 graph.uo: graph.ui table.ui util.ui 
 treepp.uo: treepp.ui table.ui tree.uo 
@@ -122,8 +122,8 @@ parser.ui: ast.uo
 trans.uo: trans.ui temp.ui frame.ui ast.uo canon.ui treepp.ui tree.uo \
     stack.ui 
 typepp.ui: table.ui tentry.uo 
-regalloc.uo: regalloc.ui table.ui temp.ui frame.ui flow.ui assem.ui \
-    stack.ui liveness.ui util.ui 
+regalloc.uo: regalloc.ui table.ui codegen.ui temp.ui frame.ui flow.ui \
+    assem.ui tree.uo stack.ui liveness.ui util.ui 
 interp.ui: temp.ui frame.ui tree.uo 
 liveness.uo: liveness.ui table.ui temp.ui graph.ui flow.ui assem.ui util.ui 
 topsort.uo: topsort.ui table.ui tentry.uo ast.uo util.ui 

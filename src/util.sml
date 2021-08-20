@@ -66,4 +66,12 @@ structure util :> util = struct
   (* Indica si un elemento no está en el conjunto *)
   val notIn = not o member
 
+  (* Indica si el elemento está en la lista *)
+  fun inList (l, e) = List.exists (fn e' => e=e') l
+
+  (* Reemplaza cada ocurrencia de un elemento en una lista por otro *)
+  fun replace ((a, b), []) = []
+    | replace ((a, b), (x::xs)) = 
+        if a=x then b::replace ((a, b), xs) else x::replace ((a, b), xs)
+
 end

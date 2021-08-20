@@ -4,7 +4,6 @@ structure codegen :> codegen = struct
   open tree
   open assem
   open frame
-  open regalloc
   open graph
   open flow
   open TextIO
@@ -158,7 +157,7 @@ structure codegen :> codegen = struct
     (* MOVE (TEMP... *)
     | munchStm (MOVE (TEMP t, e)) = (case e of
         MEM (BINOP (PLUS, CONST n, e')) =>
-          emitOper ("movq "^(fmt n)^"(`s0),`d0") [munchExp e'] [t]
+          emitOper ("movq "^(fmt n)^"(`s0), `d0") [munchExp e'] [t]
       | MEM (BINOP (PLUS, e', CONST n)) =>
           munchStm (MOVE (TEMP t, (MEM (BINOP (PLUS, CONST n, e')))))
       | MEM e' =>
@@ -238,30 +237,14 @@ structure codegen :> codegen = struct
   (* originalCodegen : frame.frame -> tree.stm -> assem.instr list *)
   fun originalCodegen frame stm = (munchStm stm; rev (!ilist))
 
-  (* Genera el código assembler para un procedimiento y lo vuelca en el outstream *)
-  (* codegen : outstream -> bool -> (stm list * frame) -> unit *)
-  fun codegen out debug (stms, frame) =
+  (* Genera el código assembler para un procedimiento *)
+  (* codegen : stm list -> instr list *)
+  fun codegen stms =
     let
       val _ = ilist := [] 
       val _ = List.app munchStm stms
-      val instrs = rev (!ilist)
-      (* imprime las instrucciones antes de la asignación de registros *)
-      val _ =
-        if debug then
-          (print "Instrucciones originales\n";
-          print ((name frame)^":\n");
-          List.app (print o (format id)) instrs)
-        else ()
-      (* calcula la asignación de registros *)
-      val (is, saytemp) = regalloc debug frame (procEntryExit2 (frame, instrs))
-      (* genera prólogo y epílogo de la función *)
-      val {prolog, body, epilog} = procEntryExit3 (frame, is)
-      (* escribe en el archivo assembler *)
-      fun writeOut s = output (out, s)
     in
-      writeOut prolog;
-      List.app (writeOut o (format saytemp)) body;
-      writeOut epilog
-    end 
+      rev (!ilist)
+    end
 
 end

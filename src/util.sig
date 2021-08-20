@@ -32,4 +32,10 @@ signature util = sig
   (* Indica si un elemento no está en el conjunto *)
   val notIn : 'a Splayset.set * 'a -> bool
 
+  (* Indica si el elemento está en la lista *)
+  val inList : ''a list * ''a -> bool
+
+  (* Reemplaza cada ocurrencia de un elemento en una lista por otro *)
+  val replace : (''a * ''a) * ''a list -> ''a list
+
 end

@@ -11,9 +11,12 @@ structure regalloc :> regalloc = struct
   open table
   open temp
   open util
+  open codegen
+  open tree
 
   (* bandera para debug *)
   val debug = ref false
+  val iter = ref 1
 
   (* ítem del selectStack *)
   type selectItem = {temp: temp, adjs: temp set, alias: temp option}
@@ -293,6 +296,7 @@ structure regalloc :> regalloc = struct
         let
           val _ = printDebug "Select\n"
           val alloc : (temp, string option) Tabla = tabNueva()
+          val aliases : (temp, temp) Tabla = tabNueva()
           val _ = Splayset.app (fn r => tabMete (r, SOME r, alloc)) machineRegs
           (* asigna color a un temp distinto al de sus vecinos *)
           fun color ({temp,adjs,alias=SOME a}, spilled) =
@@ -301,6 +305,7 @@ structure regalloc :> regalloc = struct
                   val c = tabSaca (a, alloc)
                   val _ = printDebug ("alias: "^a^", color: "^(getOpt (c, "spilled"))^"\n")
                   val _ = tabMete (temp, c, alloc)
+                  val _ = tabMete (temp, a, aliases)
                 in
                   spilled
                 end
@@ -325,7 +330,7 @@ structure regalloc :> regalloc = struct
                         add (spilled, temp))
                 end
           (* colorea los nodos del stack *)
-          val spilled = fold color (makeTempSet[]) selectStack
+          val spilled = stack.fold color (makeTempSet[]) selectStack
           (* muestra los temps enviados a memoria para debug *)
           fun showSpilled() = printDebug ("spilled: "^(setToStr id spilled)^"\n")
           (* muestra la tabla alloc para debug *)
@@ -342,16 +347,88 @@ structure regalloc :> regalloc = struct
           if isEmpty spilled then
             (showAlloc(); (instrs, makeAlloc alloc))
           else
-            (showSpilled(); rewrite (listItems spilled) instrs)
+            (showSpilled(); rewrite spilled aliases instrs)
         end
 
       (* Reescribe el programa volcando a memoria los temporarios spilled *)
-      (* rewrite : temp list -> instr list -> instr list * allocation *)
-      and rewrite spilled instrs =
+      (* rewrite : temp set -> (temp, temp) Tabla -> instr list -> instr list * allocation *)
+      and rewrite spilled aliases instrs =
         let
-          (* TODO *)
-          val instrs' = instrs
-          val _ = raise Fail "Rewrite todavía no implementado!"
+          (* aplica alias sucesivamente hasta encontrar un temp que no tenga alias *)
+          fun alias t = case tabBusca (t, aliases) of
+            SOME a => if member (machineRegs, a) then t else alias a
+            | NONE => t
+
+          (* crea nuevos accesos en memoria para los temporarios spilled *)
+          fun newOffset() = case allocLocal frame true of
+            InFrame n => n 
+            | _ => raise Fail "tiene que ir a memoria"
+          val accs  = tabInserList (tabNueva(),
+            List.map (fn t => (t, newOffset())) (listItems spilled))
+          val _ = printDebug "Replacements:\n"
+          val _ = if !debug then showTabla (2, id, Int.toString, accs) else ()
+
+          (* genera el reemplazo para un temporario y las instrucciones de fetch y store *)
+          (* replacementFor : temp -> (temp, instr list, instr list) *)
+          fun replacementFor spill =
+            let
+              val temp = newTemp()
+              val offset = tabSaca (spill, accs)
+              val fetch = codegen [MOVE (TEMP temp, MEM (BINOP (PLUS, TEMP fp, CONST offset)))]
+              val store = codegen [MOVE (MEM (BINOP (PLUS, TEMP fp, CONST offset)), TEMP temp)]
+            in
+              (temp, fetch, store)
+            end
+
+          (* reescribe las instrucciones *)
+          fun rewriteInstrs [] = []
+            | rewriteInstrs ((instr as OPER {assem,dst,src,jmp}) :: instrs) =
+                let
+                  val src' = List.map alias src
+                  val dst' = List.map alias dst
+                  val tempsSpilled = intersection (makeTempSet (src' @ dst'), spilled)
+                  fun aux (spill, (rs, fs, ss)) =
+                    let val (t,f,s) = replacementFor spill
+                    in ((spill,t)::rs, f @ fs, s @ ss) end
+                  val (rs, fs, ss) = List.foldl aux ([],[],[]) (listItems tempsSpilled)
+                  val src'' = List.foldl replace src' rs
+                  val dst'' = List.foldl replace dst' rs
+                  (* instrucción actualizada *)
+                  val instr' = OPER {assem=assem,dst=dst'',src=src'',jmp=jmp}
+                in
+                  fs @ [instr'] @ ss @ (rewriteInstrs instrs)
+                end
+            | rewriteInstrs (MOV {assem,dst,src} :: instrs) =
+                let
+                  val src' = alias src
+                  val dst' = alias dst
+                in
+                  if src'=dst' then (rewriteInstrs instrs)
+                  else 
+                    let
+                      val (src'', fs, _) =
+                        if member (spilled, src') then replacementFor src'
+                        else (src', [], [])
+                      val (dst'', _, ss) = 
+                        if member (spilled, dst') then replacementFor dst'
+                        else (dst', [], [])
+                      val instr' = MOV {assem=assem,dst=dst'',src=src''}
+                    in
+                      fs @ [instr'] @ ss @ (rewriteInstrs instrs)
+                    end
+                end
+            | rewriteInstrs (lab :: instrs) =
+                lab :: (rewriteInstrs instrs)
+
+          (* nuevas instrucciones *)
+          val instrs' = rewriteInstrs instrs
+          val _ =
+            if !debug then
+              (print "Instrucciones nuevas\n";
+              print ((frame.name frame)^":\n");
+              List.app (print o (format id)) instrs')
+            else ()
+          val _ = if !iter < 20 then () else raise Fail "Falló la asignación de registros!"
         in
           build instrs'
         end

@@ -14,6 +14,8 @@ open assem
 open util
 open temp
 open Process
+open frame
+open regalloc
 
 (* lexstream : instream -> lexbuf *)
 fun lexstream (is: BasicIO.instream) =
@@ -32,10 +34,11 @@ fun main args =
     val (escapes, l2) = arg (l1, "-escapes")
     val (ir, l3)      = arg (l2, "-ir")
     val (canon, l4)   = arg (l3, "-canon")
-    val (inter, l5)  = arg (l4, "-inter")
-    val (alloc, l6)    = arg (l5, "-alloc")
+    val (inter, l5)   = arg (l4, "-inter")
+    val (code, l6)    = arg (l5, "-code")
+    val (alloc, l7)   = arg (l6, "-alloc")
     (* instream *)
-    val (srcPath, entrada) = case l6
+    val (srcPath, entrada) = case l7
       of [n] => ((n, BasicIO.open_in n) handle _ => raise Fail (n^" no existe!"))
        | _   => raise Fail "opción desconocida!"
     val _ = if isSuffix ".tig" srcPath then () else raise Fail "debe tener extensión .tig"
@@ -79,10 +82,28 @@ fun main args =
       (output (out, "  .section .rodata\n");
       List.app (fn (l,s) => output (out, l^":\n"^s)) ss;
       output (out, "\n"))
-    (* genera assembler para los procedimientos *)
+    (* función que genera assembler para un procedimiento *)
+    fun assem (stms, frame) =
+      let
+        val instrs = codegen stms
+        (* imprime las instrucciones antes de la asignación de registros *)
+        val _ = if not code then () else
+          (print "Instrucciones originales\n";
+          print ((name frame)^":\n");
+          List.app (print o (format id)) instrs)
+        (* calcula la asignación de registros *)
+        val (is, saytemp) = regalloc alloc frame (procEntryExit2 (frame, instrs))
+        (* genera prólogo y epílogo de la función *)
+        val {prolog, body, epilog} = procEntryExit3 (frame, is)
+      in
+        output (out, prolog);
+        List.app (fn instr => output (out, format saytemp instr)) body;
+        output (out, epilog)
+      end
+    (* genera assembler para todos los procedimientos *)
     val _ =
       (output (out, "  .section .text\n");
-      List.app (codegen out alloc) ps;
+      List.app assem ps;
       output (out, "\n"))
     (* cierra el archivo *)
     val _ = closeOut out
