@@ -386,13 +386,27 @@ structure regalloc :> regalloc = struct
                 let
                   val src' = List.map alias src
                   val dst' = List.map alias dst
-                  val tempsSpilled = intersection (makeTempSet (src' @ dst'), spilled)
+
+                  val srcSet = makeTempSet src'
+                  val dstSet = makeTempSet dst'
+
+                  val justUse = intersection (difference (srcSet, dstSet), spilled)
+                  val justDef = intersection (difference (dstSet, srcSet), spilled)
+                  val bothUseDef = intersection (intersection (srcSet, dstSet), spilled)
+
                   fun aux (spill, (rs, fs, ss)) =
                     let val (t,f,s) = replacementFor spill
                     in ((spill,t)::rs, f @ fs, s @ ss) end
-                  val (rs, fs, ss) = List.foldl aux ([],[],[]) (listItems tempsSpilled)
-                  val src'' = List.foldl replace src' rs
-                  val dst'' = List.foldl replace dst' rs
+                  val (rsUse, fsUse, _) = List.foldl aux ([],[],[]) (listItems justUse)
+                  val (rsDef, _, ssDef) = List.foldl aux ([],[],[]) (listItems justDef)
+                  val (rsBoth, fsBoth, ssBoth) = List.foldl aux ([],[],[]) (listItems bothUseDef)
+
+                  val fs = fsUse @ fsBoth
+                  val ss = ssDef @ ssBoth
+
+                  val src'' = List.foldl replace src' (rsUse @ rsBoth)
+                  val dst'' = List.foldl replace dst' (rsDef @ rsBoth)
+
                   (* instrucción actualizada *)
                   val instr' = OPER {assem=assem,dst=dst'',src=src'',jmp=jmp}
                 in
