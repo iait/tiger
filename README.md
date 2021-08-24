@@ -28,5 +28,6 @@ En este ejemplo el resultado deberá ser 45.
 - **-ir**: imprime el código intermedio generado (antes de la etapa de canonización),
 - **-canon**: imprime el código intermedio canonizado,
 - **-inter**: ejecuta el intérprete de código intermedio (no muy probado),
+- **-code**: imprime el código assembler generado antes de la asignación de registros,
 - **-alloc**: imprime todo lo relacionado con la asignación de registros, como ser control-flow graph, grafo de interferencias y pasos detallados para el coloreo.
 
