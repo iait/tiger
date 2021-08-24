@@ -1,7 +1,7 @@
-/* función con parámetros repetidos */
+/* error: función con parámetros repetidos */
 let
-	function f(name : string, id : int, name : string) =
+  function f(name : string, id : int, name : string) =
     0
 in
-	0
+  0
 end

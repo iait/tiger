@@ -18,7 +18,7 @@ structure treepp :> treepp = struct
     | stm (JUMP (e,_), d) =  indent(d)^say("JUMP(")^exp(e,d+1)^say(")")
     | stm (CJUMP (r,a,b,t,f),d) = 
         indent(d)^say("CJUMP(")^
-        relop(r)^sayln(",")^
+        printRelOp(r)^sayln(",")^
         exp(a,d+1)^sayln(",")^exp(b,d+1)^sayln(",")^
         indent(d+1)^say(t)^say(",")^say(f)^say(")")
     | stm (MOVE (a,b),d) = 
@@ -28,7 +28,7 @@ structure treepp :> treepp = struct
 
   (* exp : tree.exp * int -> string *)
   and exp (BINOP (p,a,b),d) = 
-        indent(d)^say("BINOP(")^binop(p)^sayln(",")^
+        indent(d)^say("BINOP(")^printBinOp(p)^sayln(",")^
         exp(a,d+1)^sayln(",")^exp(b,d+1)^say(")")
     | exp (MEM e,d) = indent(d)^sayln("MEM(")^exp(e,d+1)^say(")")
     | exp (TEMP t, d) = indent(d)^say("TEMP ")^say(t)
@@ -41,27 +41,27 @@ structure treepp :> treepp = struct
         indent(d)^sayln("CALL(")^(exp(e,d+1))^
         concat(map (fn a => sayln(",")^exp(a,d+2)) el)^say(")")
 
-  and binop PLUS = say "PLUS"
-    | binop MINUS = say "MINUS"
-    | binop MUL = say "MUL"
-    | binop DIV = say "DIV"
-    | binop AND = say "AND"
-    | binop OR = say "OR"
-    | binop LSHIFT = say "LSHIFT"
-    | binop RSHIFT = say "RSHIFT"
-    | binop ARSHIFT = say "ARSHIFT"
-    | binop XOR = say "XOR"
+  and printBinOp PLUS = say "PLUS"
+    | printBinOp MINUS = say "MINUS"
+    | printBinOp MUL = say "MUL"
+    | printBinOp DIV = say "DIV"
+    | printBinOp AND = say "AND"
+    | printBinOp OR = say "OR"
+    | printBinOp LSHIFT = say "LSHIFT"
+    | printBinOp RSHIFT = say "RSHIFT"
+    | printBinOp ARSHIFT = say "ARSHIFT"
+    | printBinOp XOR = say "XOR"
 
-  and relop EQ = say "EQ"
-    | relop NE = say "NE"
-    | relop LT = say "LT"
-    | relop GT = say "GT"
-    | relop LE = say "LE"
-    | relop GE = say "GE"
-    | relop ULT = say "ULT"
-    | relop ULE = say "ULE"
-    | relop UGT = say "UGT"
-    | relop UGE = say "UGE"
+  and printRelOp EQ = say "EQ"
+    | printRelOp NE = say "NE"
+    | printRelOp LT = say "LT"
+    | printRelOp GT = say "GT"
+    | printRelOp LE = say "LE"
+    | printRelOp GE = say "GE"
+    | printRelOp ULT = say "ULT"
+    | printRelOp ULE = say "ULE"
+    | printRelOp UGT = say "UGT"
+    | printRelOp UGE = say "UGE"
 
   (* printTreeExp : tree.exp -> string *)
   fun printTreeExp e0 = exp(e0,0)^sayln("")

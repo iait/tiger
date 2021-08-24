@@ -1,0 +1,23 @@
+let
+  function or(x: int, y: int): int = if x then 1 else y
+  function and(x: int, y: int): int = if x then y else 0
+
+  function readLine(): string =
+    let
+      var c: string := getchar()
+      var str: string := ""
+    in
+      (while and(c<>"", c<>"\n") do
+        str := concat(str, c);
+      str)
+    end
+
+  var s: string := ""
+in
+  (
+    print("¿Cuál es tu nombre?\n");
+    s := readLine();
+    print(concat("Hola ", concat(s, "\n")));
+    0
+  )
+end

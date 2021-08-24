@@ -258,7 +258,7 @@ structure regalloc :> regalloc = struct
                 end
         in
           case findSpill (tabClaves adj) (NONE, 0) of
-            NONE => print "finish!\n" (* solo quedan nodos precoloreados *)
+            NONE => printDebug "finish!\n" (* solo quedan nodos precoloreados *)
             | SOME t => simplify (spillTemp t (ig, ms))
         end
 

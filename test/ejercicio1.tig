@@ -1,0 +1,5 @@
+/* Escribir un “Hola Mundo!” en Tiger */
+(
+  print("¡Hola mundo!\n");
+  0
+)

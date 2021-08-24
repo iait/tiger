@@ -350,7 +350,8 @@ structure trans :> trans = struct
       val recAddr = newTemp()
       fun initRecord [] = []
         | initRecord ((e, i)::tl) = 
-            (MOVE (BINOP (PLUS, TEMP recAddr, CONST (i*frame.wSz)), unEx e))::(initRecord tl)
+            (MOVE (MEM (BINOP (PLUS, TEMP recAddr, CONST (i*frame.wSz))), unEx e))
+            ::(initRecord tl)
       val initStms = initRecord l
       val allocRecord = externalCall ("_allocRecord", [CONST (List.length l)])
     in

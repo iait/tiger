@@ -1,7 +1,8 @@
+/* error: la declaración de la función a pisa la variable a */
 let
-   type a = int
-   var a : a := 2
-   function a (a : a) : a = a
+  type a = int
+  var a : a := 2
+  function a (a : a) : a = a
 in
-   a (a + a); 0
+  a (a + a); 0
 end

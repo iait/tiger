@@ -1,1 +1,2 @@
+/* error: no se pueden comparar dos nils */
 nil = nil

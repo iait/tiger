@@ -1,0 +1,8 @@
+/* prueba de allocRecord y checkNil */
+let
+  type  person = {name : string, age : int}
+  var p1 : person := person {name="Juan", age=18}
+  var p2 : person := person {name="Maria", age=20}
+in
+  if p1.name < p2.name then p1.age else p2.age
+end

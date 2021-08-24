@@ -1,0 +1,135 @@
+let
+  /* Las listas de enteros pueden representarse utilizando 
+   * el siguiente record */
+  type lista = {item: int , resto: lista}
+
+  /* cons: que recibe dos argumentos, un entero y una lista. 
+   * Devuelve la lista formada por el entero seguido de la lista. */
+  /* NOTA: no modifica la lista recibida como argumento */
+  function cons(i: int, l: lista): lista = (
+    if l=nil then lista{item=i, resto=nil}
+    else lista{item=i, resto=cons(l.item, l.resto)}
+  )
+
+   /* length: que recibe una lista de enteros, y devuelve la 
+    * longitud de la misma. */
+  function length(l: lista): int = (
+    if l=nil then 0 else 1+length(l.resto)
+  )
+
+  /* copy: crea una copia de una lista */
+  function copy(l: lista): lista = (
+    if l=nil then nil else cons(l.item, l.resto)
+  )
+
+  /* concat: que recibe dos listas como argumentos y las concatena. */
+  function concat(l1: lista, l2: lista): lista = (
+    if l1=nil then copy(l2)
+    else cons(l1.item, concat(l1.resto, l2))
+  )
+
+  /* snoc: que recibe dos argumentos: un entero x y una lista xs.
+   * Devuelve la lista xs con el elemento x al final. */
+  function snoc(l: lista, i: int): lista = (
+    if l=nil then lista{item=i, resto=nil}
+    else cons(l.item, snoc(l.resto, i))
+  )
+
+  /* filtra: que recibe un entero n y una lista l. Devuelve una 
+   * lista formada por los elementos de l que no son iguales a n, 
+   * manteniendo el orden de l. */
+  function filtra(n: int, l: lista): lista = (
+    if l=nil then nil
+    else if l.item=n then filtra(n, l.resto)
+    else cons(l.item, filtra(n, l.resto))
+  )
+
+  /* isin que recibe dos argumentos: un entero x y una lista xs.
+   * Devolviendo verdadero si x aparece al menos una vez en xs. */
+  function isin(n: int, l: lista): int = (
+    if l=nil then 0
+    else if l.item=n then 1
+    else isin(n, l.resto)
+  )
+
+  /* remove que recibe dos argumentos: un entero x y una lista xs.
+   * Devolviendo el resultado de borrar la primer aparición de x en xs 
+   * en el caso que isin(x, xs) sea verdadero. */
+  function remove(n: int, l: lista): lista = (
+    if l=nil then nil
+    else if l.item=n then copy(l.resto)
+    else cons(l.item, remove(n, l.resto))
+  )
+
+  /* removeall que recibe dos argumentos similar a remove pero que 
+   * elimina todas las apariciones de x en xs. */
+  function removeall(n: int, l: lista): lista = filtra(n, l)
+
+  /* reverse que recibe una lista de enteros, y retorna la lista en 
+   * orden inverso. */
+  function reverse(l: lista): lista = (
+    if l=nil then nil
+    else snoc(reverse(l.resto), l.item)
+  )
+
+  /* printint: imprime un entero */
+  function printint(i: int) =
+    let
+      function aux(i: int) =
+        if i > 0 then
+          (aux(i/10); print (chr (i-i/10*10 + ord("0"))))
+    in
+      if i < 0 then (print ("-"); aux(-i))
+      else if i>0 then aux(i)
+      else print ("0")
+    end
+
+  /* printlist: que toma como argumento una lista de enteros y la muestra 
+   * por pantalla. */
+  function printlist(lista: lista) =
+    let
+      function aux(l: lista) =
+        if l=nil then
+          ()
+        else if l.resto=nil then
+          printint(l.item)
+        else
+          (printint(l.item); print(", "); aux(l.resto))
+    in
+      (print("["); aux(lista); print("]\n"))
+    end
+
+  /* Pruebas */
+  var empty:lista := nil /* [] */
+  var singleton:lista := cons(1, empty) /* [1] */
+  var l1:lista := cons(2, singleton) /* [2, 1] */
+  var l2:lista := cons(3, l1) /* [3, 2, 1] */
+  var l3: lista := lista{item=1, resto=lista{item=2, resto=nil}} /* [1, 2] */
+  var l4: lista := concat(l1, l2) /* [2, 1, 3, 2, 1] */
+  var l5: lista := snoc(l2, 0) /* [3, 2, 1, 0] */
+  var l6: lista := filtra(1, l4) /* [2, 3, 2] */
+  var l7: lista := remove(1, l4) /* [2, 3, 2, 1] */
+  var l8: lista := removeall(1, l4) /* [2, 3, 2] */
+  var l9: lista := reverse(l4) /* [1, 2, 3, 1, 2] */
+
+  function printnl() = print("\n")
+
+in
+  (
+    l1.item := 54; /* l1 = [54, 1] */
+    printlist(empty); printint(length(empty)); printnl();
+    printlist(singleton); printint(length(singleton)); printnl();
+    printlist(l1); printint(length(l1)); printnl();
+    printlist(l2); printint(length(l2)); printnl();
+    printlist(l3); printint(length(l3)); printnl();
+    printlist(l4); printint(length(l4)); printnl();
+    printlist(l5); printint(length(l5)); printnl();
+    printlist(l6); printint(length(l6)); printnl();
+    if isin(1, l5) then print("el 1 está en l5\n");
+    if not(isin(1, l6)) then print("el 1 no está en l6\n");
+    printlist(l7); printint(length(l7)); printnl();
+    printlist(l8); printint(length(l8)); printnl();
+    printlist(l9); printint(length(l9)); printnl();
+    0
+  )
+end

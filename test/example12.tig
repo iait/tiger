@@ -1,0 +1,10 @@
+/* prueba de allocRecord y checkNil */
+/* da error en ejecución: record nil */
+let
+  type  person = {name : string, age : int}
+  var p1 : person := person {name="Juan", age=18}
+  var p2 : person := person {name="Maria", age=20}
+  var p3 : person := nil
+in
+  p3.age
+end

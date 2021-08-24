@@ -1,0 +1,74 @@
+let
+  function or(x: int, y: int): int = if x then 1 else y
+  function and(x: int, y: int): int = if x then y else 0
+
+  /* lee una línea de consola */
+  function readLine(): string =
+    let
+      var c: string := getchar()
+      var str: string := ""
+    in
+      (while and(c<>"", c<>"\n") do (
+        str := concat(str, c);
+        c := getchar()
+      );
+      str)
+    end
+
+  /* busca el primer caracter distinto de espacio */
+  function firstIndex(str: string): int =
+    if str="" then -1
+    else
+      let
+        var i := 0
+        var s := size(str)
+        var sub := substring(str, i, 1)
+      in
+        (
+          while and(i<s, sub=" ") do (
+            i := i+1;
+            if i<s then
+              sub := substring(str, i, 1)
+          );
+          if sub<>" " then i else -1
+        )
+      end
+
+  /* busca el último caracter distinto de espacio */
+  function lastIndex(str: string): int =
+    if str="" then -1
+    else
+      let
+        var i := size(str)-1
+        var sub := substring(str, i, 1)
+      in
+        (
+          while and(i>=0, sub=" ") do (
+            i := i-1;
+            if i>=0 then
+              sub := substring(str, i, 1)
+          );
+          if sub<>" " then i else -1
+        )
+      end
+
+  /* elimina espacios en blanco a los lados del string */
+  function trim(s: string): string =
+    let
+      var f := firstIndex(s)
+      var l := lastIndex(s)
+    in
+      if f=l then "" else substring(s, f, l-f+1)
+    end
+
+  var s: string := ""
+in
+  (
+    print("¿Cuál es tu nombre?\n");
+    flush();
+    s := trim(readLine());
+    print(concat("Hola ", concat(s, "\n")));
+    flush();
+    0
+  )
+end

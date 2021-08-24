@@ -1,0 +1,11 @@
+/* prueba de allocArray y checkIndex */
+let
+  type  intArray = array of int
+  var arr : intArray := intArray [10] of 0
+  var i : int := 0
+in
+  for i := 0 to 9 do (
+    arr[i] := i
+  );
+  arr[4]
+end

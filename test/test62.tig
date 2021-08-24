@@ -1,8 +1,7 @@
-/* record con campos repetidos */
+/* error: record con campos repetidos */
 let
-	type rectype = {name : string, id : int, name : string}
-
-	var a : rectype := nil
+  type rectype = {name : string, id : int, name : string}
+  var a : rectype := nil
 in
-	0
+  0
 end

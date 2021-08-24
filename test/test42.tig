@@ -9,7 +9,7 @@ let
 
   var arr1 := arrtype1 [10] of 0
   var arr2 := arrtype2 [5] of
-  	 rectype1 {name="aname", address="somewhere", id=0, age=0}
+     rectype1 {name="aname", address="somewhere", id=0, age=1}
   var arr3 : arrtype3 := arrtype3 [100] of ""
 
   var rec1 := rectype1 {name="Kapoios", address="Kapou", id=02432, age=44}
@@ -23,5 +23,7 @@ in
 
   rec1.name := "sdf";
   rec2.dates[0] := 2323;
-  rec2.dates[2] := 2323; 0
+  rec2.dates[2] := 2323;
+  arr1[9] + arr2[1].age + arr2[0].age + rec2.dates[2] - rec2.dates[1] - 250
+  /* 3 + 23 + 23 + 2323 - 1900 - 250 = 222 */
 end

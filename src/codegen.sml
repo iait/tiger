@@ -8,6 +8,7 @@ structure codegen :> codegen = struct
   open flow
   open TextIO
   open util
+  open treepp
 
   (* lista de instrucciones *)
   val ilist = ref ([] : instr list)
@@ -58,13 +59,16 @@ structure codegen :> codegen = struct
                 emitOper "idivq `s0" [munchExp e2, rax, rdx] [rax, rdx]
         in rax end
     
+    | munchExp (BINOP (LSHIFT, TEMP t, CONST n)) =
+        let val _ = emitOper ("shlq $"^(fmt n)^", `d0") [t] [t]
+        in t end
     | munchExp (BINOP (oper, e1, e2)) =
         let
           val instr = case oper of
               PLUS => "addq"
             | MINUS => "subq"
             | MUL => "imulq"
-            | _ => raise Fail "operación no soportada"
+            | _ => raise Fail ("operación no soportada "^(printBinOp oper))
           val t = newTemp()
           val _ = munchStm (MOVE (TEMP t, e1))
           val _ = case e2 of
@@ -151,9 +155,14 @@ structure codegen :> codegen = struct
         in
           emitOper ("call "^f) src frame.callerSave
         end
-    | munchStm (EXP _) =
-        raise Fail "no debería existir otro tipo de EXP"
+    | munchStm (EXP (CALL _)) =
+        raise Fail "CALL sin label"
 
+    (* expresión descartando su valor *)
+    (* EXP... *)
+    | munchStm (EXP e) = (munchExp e; ())
+
+    (* invocación a función con retorno *)
     (* MOVE (TEMP... *)
     | munchStm (MOVE (TEMP t, e)) = (case e of
         MEM (BINOP (PLUS, CONST n, e')) =>
@@ -189,7 +198,8 @@ structure codegen :> codegen = struct
       | _ =>
           emitOper ("movq `s0, (`s1)") [munchExp e2, munchExp e1] [])
 
-    | munchStm (MOVE _) = raise Fail "no debería haber otro tipo de MOVE"
+    | munchStm (stm as (MOVE _)) =
+        raise Fail ("no debería haber otro tipo de MOVE: "^(printTreeStm stm))
 
     (* JUMP... *)
     | munchStm (JUMP (NAME l, ls)) =
@@ -213,7 +223,8 @@ structure codegen :> codegen = struct
             | emitComp oper e1 (CONST n2) =
                 (emitOper ("cmpq $"^(fmt n2)^", `s0") [munchExp e1] []; oper)
             | emitComp oper e1 (MEM e2) =
-                emitComp (notRel oper) (MEM e2) e1
+                let val oper' = if oper=EQ orelse oper=NE then oper else notRel oper
+                in emitComp oper' (MEM e2) e1 end
             | emitComp oper e1 e2 =
                 (emitOper ("cmpq `s0, `s1") [munchExp e2, munchExp e1] []; oper)
           (* emite la instrucción de comparación y devuelve la operación correspondiente *)
@@ -226,7 +237,7 @@ structure codegen :> codegen = struct
             | GT => emitJump ("jg "^l1) [l1, l2]
             | LE => emitJump ("jle "^l1) [l1, l2]
             | GE => emitJump ("jge "^l1) [l1, l2]
-            | _ => raise Fail "operación no soportada"
+            | _ => raise Fail ("operación no soportada "^(printRelOp reloper'))
         end
 
     (* LABEL l *)

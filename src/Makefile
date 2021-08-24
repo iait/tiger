@@ -98,8 +98,8 @@ test.uo: parser.ui astpp.ui seman.ui lexer.uo line.uo ast.uo error.uo \
     util.ui escape.ui 
 trans.ui: temp.ui frame.ui ast.uo tree.uo 
 assem.ui: temp.ui 
-codegen.uo: codegen.ui temp.ui graph.ui frame.ui flow.ui assem.ui tree.uo \
-    util.ui 
+codegen.uo: codegen.ui temp.ui graph.ui frame.ui flow.ui assem.ui treepp.ui \
+    tree.uo util.ui 
 escape.ui: ast.uo 
 ventry.uo: table.ui trans.ui tentry.uo temp.ui ast.uo 
 astpp.ui: ast.uo 

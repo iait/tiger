@@ -1,0 +1,14 @@
+let
+  var N := 8
+
+  function printboard() = print ("iguales\n")
+
+  function try(c : int) = (
+    if c=N then
+      printboard()
+    else
+      print("distintos\n")
+  )
+in
+  try(8); 0
+end

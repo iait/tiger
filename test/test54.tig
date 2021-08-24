@@ -1,12 +1,12 @@
 /* local types hide global */
 let
-	type a = int
+  type a = int
 in
-	let
+  let
     var a : a := 0
-		type a = string
+    type a = string
     var b : a := ""
-	in
-		a
-	end
+  in
+    a
+  end
 end
